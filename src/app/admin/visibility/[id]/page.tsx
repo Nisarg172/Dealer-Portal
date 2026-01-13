@@ -44,11 +44,11 @@ export default function ManageDealerVisibilityPage() {
 
         // Fetch all categories
         const categoriesResponse = await apiClient.get('/admin/categories');
-        setCategories(categoriesResponse.data.categories);
+        setCategories(categoriesResponse.data.data);
 
         // Fetch all products
         const productsResponse = await apiClient.get('/admin/products');
-        setProducts(productsResponse.data.products);
+        setProducts(productsResponse.data.data);
 
         // Fetch existing visibility settings for this dealer
         const visibilityResponse = await apiClient.get(`/admin/visibility/${dealerId}`); // Assuming this API exists

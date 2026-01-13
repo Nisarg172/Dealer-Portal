@@ -36,15 +36,15 @@ export default function ManageDealerDiscountsPage() {
         setDealerName(dealerResponse.data.dealer.name);
 
         // Fetch all categories
-        const categoriesResponse = await apiClient.get('/admin/categories');
-        setCategories(categoriesResponse.data.categories);
+        const categoriesResponse = await apiClient.get('/admin/categories',{});
+        setCategories(categoriesResponse.data.data);
 
         // Fetch existing discounts for this dealer
         const discountsResponse = await apiClient.get(`/admin/discounts/${dealerId}`); // Assuming this API exists
         const existingDiscounts: CategoryDiscount[] = discountsResponse.data.discounts; // { category_id, discount_percentage }
 
         // Pre-populate form with existing discounts
-        const initialDiscounts = categoriesResponse.data.categories.map((category: Category) => {
+        const initialDiscounts = categoriesResponse.data.data.map((category: Category) => {
           const existing = existingDiscounts.find(d => d.category_id === category.id);
           return {
             category_id: category.id,

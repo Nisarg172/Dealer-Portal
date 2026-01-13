@@ -5,30 +5,54 @@ import { getAdminIdFromAuth } from '../../utils/functions';
 
 // GET /api/admin/categories - Fetch all categories
 export async function GET(req: NextRequest) {
-  const payload = await getAdminIdFromAuth();
-  if (!payload || payload?.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+ 
 
   try {
-    const { data: categories, error } = await supabase
+    const { searchParams } = new URL(req.url);
+
+    const search = searchParams.get('search') || '';
+    const sortBy = searchParams.get('sortBy') || 'name';
+    const sortOrder = searchParams.get('sortOrder') === 'desc' ? false : true;
+    const page = Number(searchParams.get('page') || 1);
+    const limit = Number(searchParams.get('limit') || 10);
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
       .from('categories')
-      .select('id, name')
-      .is('deleted_at', null) // Only active (not soft-deleted) categories
-      .order('name', { ascending: true });
+      .select('id, name', { count: 'exact' })
+      .is('deleted_at', null)
+      .order(sortBy, { ascending: sortOrder });
+
+    if (search) {
+      query = query.ilike('name', `%${search}%`);
+    }
+
+    const { data, error, count } = await query.range(from, to);
 
     if (error) {
-      console.error('Error fetching categories:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ categories });
+    return NextResponse.json({
+      data,
+      meta: {
+        page,
+        limit,
+        total: count ?? 0,
+        totalPages: Math.ceil((count ?? 0) / limit),
+      },
+    });
   } catch (err) {
-    console.error('Unexpected error fetching categories:', err);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error(err);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
+
 
 // POST /api/admin/categories - Create a new category
 export async function POST(req: NextRequest) {

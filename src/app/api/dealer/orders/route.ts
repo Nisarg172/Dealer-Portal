@@ -151,35 +151,95 @@ export async function POST(req: NextRequest) {
 }
 
 // GET /api/dealer/orders - Fetch all orders for a dealer
+
 export async function GET(req: NextRequest) {
-    const dealerId = await getDealerIdFromAuth();
-    if (!dealerId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const dealerId = await getDealerIdFromAuth();
+  if (!dealerId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    
+
+    /* ----------------------------
+       Read query params
+    ----------------------------- */
+    const { searchParams } = new URL(req.url);
+
+    const search = searchParams.get('search') ?? '';
+    const sortBy = searchParams.get('sortBy') ?? 'created_at';
+    const sortOrder = (searchParams.get('sortOrder') ?? 'desc') as 'asc' | 'desc';
+    const page = Number(searchParams.get('page') ?? 1);
+    const limit = Number(searchParams.get('limit') ?? 10);
+
+    const filterKey = searchParams.get('filter[key]');
+    const filterValue = searchParams.get('filter[value]');
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    /* ----------------------------
+       Base query
+    ----------------------------- */
+    let query = supabase
+      .from('orders')
+      .select(
+        `
+        id,
+        total_amount,
+        order_status,
+        created_at
+        `,
+        { count: 'exact' }
+      )
+      .eq('dealer_id', dealerId);
+
+    /* ----------------------------
+       Search (Order ID)
+    ----------------------------- */
+    if (search) {
+      query = query.ilike('id', `%${search}%`);
     }
 
-
-    try {
-        const { data: orders, error } = await supabase
-            .from('orders')
-            .select(
-                `
-                id,
-                total_amount,
-                order_status,
-                created_at
-                `
-            )
-            .eq('dealer_id', dealerId)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Error fetching dealer orders:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
-        return NextResponse.json({ orders });
-    } catch (err) {
-        console.error('Unexpected error fetching dealer orders:', err);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    /* ----------------------------
+       Filtering
+    ----------------------------- */
+    if (filterKey && filterValue) {
+      query = query.eq(filterKey, filterValue);
     }
+
+    /* ----------------------------
+       Sorting
+    ----------------------------- */
+    query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+
+    /* ----------------------------
+       Pagination
+    ----------------------------- */
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error(error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      data,
+      meta: {
+        page,
+        limit,
+        total: count ?? 0,
+        totalPages: Math.ceil((count ?? 0) / limit),
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
+  }
 }
+

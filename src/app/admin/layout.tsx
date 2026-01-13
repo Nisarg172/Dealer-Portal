@@ -1,15 +1,67 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import apiClient from '@/lib/axios';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import React from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import apiClient from '@/lib/axios';
+import {
+  FiHome,
+  FiUsers,
+  FiGrid,
+  FiBox,
+  FiPercent,
+  FiEye,
+  FiClipboard,
+  FiLogOut,
+  FiMenu,
+} from 'react-icons/fi';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+const navItems = [
+  {
+    label: 'Dashboard',
+    href: '/admin/dashboard',
+    icon: FiHome,
+  },
+  {
+    label: 'Dealers',
+    href: '/admin/dealers',
+    icon: FiUsers,
+  },
+  {
+    label: 'Categories',
+    href: '/admin/categories',
+    icon: FiGrid,
+  },
+  {
+    label: 'Products',
+    href: '/admin/products',
+    icon: FiBox,
+  },
+  {
+    label: 'Discounts',
+    href: '/admin/discounts',
+    icon: FiPercent,
+  },
+  {
+    label: 'Visibility',
+    href: '/admin/visibility',
+    icon: FiEye,
+  },
+  {
+    label: 'Orders',
+    href: '/admin/orders',
+    icon: FiClipboard,
+  },
+];
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
-
-  // As per prompt: "Role validation via backend + middleware"
-  // If this component renders, we assume the middleware has already validated admin role.
+  const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -17,32 +69,78 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.push('/login');
     } catch (error) {
       console.error('Logout failed:', error);
-      // Optionally, show a message to the user
     }
   };
 
   return (
     <div className="flex min-h-screen bg-gray-100">
-      <aside className="w-64 bg-gray-800 text-white p-4 space-y-4">
-        <h1 className="text-2xl font-bold">Admin Panel</h1>
-        <nav className="space-y-2">
-          <Link href="/admin/dashboard" className="block p-2 rounded hover:bg-gray-700">Dashboard</Link>
-          <Link href="/admin/dealers" className="block p-2 rounded hover:bg-gray-700">Dealers</Link>
-          <Link href="/admin/categories" className="block p-2 rounded hover:bg-gray-700">Categories</Link>
-          <Link href="/admin/products" className="block p-2 rounded hover:bg-gray-700">Products</Link>
-          <Link href="/admin/discounts" className="block p-2 rounded hover:bg-gray-700">Discounts</Link>
-          <Link href="/admin/visibility" className="block p-2 rounded hover:bg-gray-700">Visibility</Link>
-          <Link href="/admin/orders" className="block p-2 rounded hover:bg-gray-700">Orders</Link>
-          <button 
-            onClick={handleLogout}
-            className="w-full text-left p-2 rounded hover:bg-gray-700 focus:outline-none"
+      {/* Sidebar */}
+      <aside
+        className={`${
+          collapsed ? 'w-18' : 'w-64'
+        } bg-gray-900 text-white transition-all duration-300 flex flex-col`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          {!collapsed && (
+            <h1 className="text-lg font-bold tracking-wide">
+              Admin Panel
+            </h1>
+          )}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-2 rounded hover:bg-gray-700 transition"
           >
-            Logout
+            <FiMenu size={22} />
           </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-2 py-4 space-y-1">
+          {navItems.map(item => {
+            const Icon = item.icon;
+            const isActive = pathname.startsWith(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all
+                  ${
+                    isActive
+                      ? 'bg-indigo-600 text-white shadow'
+                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  }
+                `}
+              >
+                <Icon size={22} />
+                {!collapsed && (
+                  <span className="text-sm font-medium">
+                    {item.label}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </nav>
+
+        {/* Logout */}
+        <div className="p-2 border-t border-gray-700">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-gray-300 hover:bg-red-600 hover:text-white transition-all"
+          >
+            <FiLogOut size={22} />
+            {!collapsed && <span className="text-sm">Logout</span>}
+          </button>
+        </div>
       </aside>
-      <main className="flex-1 p-8">
-        {children}
+
+      {/* Main Content */}
+      <main className="flex-1 p-6 overflow-y-auto">
+        <div className="bg-white rounded-xl shadow-sm p-6 min-h-[calc(100vh-3rem)]">
+          {children}
+        </div>
       </main>
     </div>
   );

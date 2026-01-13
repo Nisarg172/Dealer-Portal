@@ -109,33 +109,60 @@ export async function POST(req: NextRequest) {
 
 // Get all dealers
 export async function GET(req: NextRequest) {
-    try {
-
-        const payload = await getAdminIdFromAuth();
-         if (!payload || payload?.role !== 'admin') {
-              return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-          }
-
-        const { data: dealers, error } = await supabase
-            .from('dealers')
-            .select(
-                `
-                id,
-                name,
-                company_name,
-                address,
-                users ( email, phone, is_active )
-            `)
-            .is('deleted_at', null); // Only active (not soft-deleted) dealers
-
-        if (error) {
-            console.error('Error fetching dealers:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
-        return NextResponse.json({ dealers });
-    } catch (err) {
-        console.error('Unexpected error fetching dealers:', err);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  try {
+    const payload = await getAdminIdFromAuth();
+    if (!payload || payload.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const { searchParams } = new URL(req.url);
+
+    const search = searchParams.get('search') || '';
+    const sortBy = searchParams.get('sortBy') || 'name';
+    const sortOrder = searchParams.get('sortOrder') === 'desc' ? false : true;
+    const page = Number(searchParams.get('page') || 1);
+    const limit = Number(searchParams.get('limit') || 10);
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from('dealers')
+      .select(
+        `
+        id,
+        name,
+        company_name,
+        address,
+        users ( email, phone, is_active )
+      `,
+        { count: 'exact' }
+      )
+      .is('deleted_at', null)
+      .order(sortBy, { ascending: sortOrder });
+
+    if (search) {
+      query = query.or(
+        `name.ilike.%${search}%,company_name.ilike.%${search}%`
+      );
+    }
+
+    const { data, error, count } = await query.range(from, to);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      data,
+      meta: {
+        page,
+        limit,
+        total: count ?? 0,
+        totalPages: Math.ceil((count ?? 0) / limit),
+      },
+    });
+  } catch {
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
 }
