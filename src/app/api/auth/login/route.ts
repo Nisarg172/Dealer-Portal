@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   
   try {
     const { identifier, password} = await req.json();
-    
+    console.log("===========>")
 
     if (!identifier || !password) {
       return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
@@ -25,6 +25,9 @@ export async function POST(req: NextRequest) {
       // phone: identifier,
       password,
     });
+
+    console.log("==============>",identifier,password)
+    console.log("===========>",authData, authError)
 
     if (authError || !authData.user) {
       console.error('Supabase sign-in error:', authError);
