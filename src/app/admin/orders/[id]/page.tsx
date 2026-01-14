@@ -64,7 +64,7 @@ export default function AdminOrderDetailsPage() {
     setUpdatingStatus(true);
     setError(null);
     try {
-      await apiClient.put(`/admin/orders/${orderId}`, { status: newStatus }); // Assuming PUT /api/admin/orders/[id] for status update
+      await apiClient.put(`/admin/orders/${orderId}`, { order_status: newStatus }); // Assuming PUT /api/admin/orders/[id] for status update
       setOrderDetails(prev => prev ? { ...prev, status: newStatus } : null);
       setCurrentStatus(newStatus);
     } catch (err: any) {

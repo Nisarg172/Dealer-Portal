@@ -33,7 +33,7 @@ export default function CreateProductPage() {
     const fetchCategories = async () => {
       try {
         const response = await apiClient.get('/admin/categories');
-        setCategories(response.data.categories);
+        setCategories(response.data.data);
       } catch (err: any) {
         console.error('Error fetching categories for product form:', err);
         setCategoryError(err.response?.data?.error || 'Failed to load categories.');
