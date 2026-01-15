@@ -6,52 +6,67 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 
 // GET /api/admin/orders/[id] - Fetch details for a single order
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+import { cookies } from 'next/headers';
 
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   const orderId = params.id;
 
   try {
-    const { data: orderData, error } = await supabase
+    const { data, error } = await supabase
       .from('orders')
-      .select(
-        `
+      .select(`
         id,
         total_amount,
         order_status,
         created_at,
-        dealers ( name, company_name, users ( email, phone ) ),
-        order_items ( product_id, quantity, price_at_order, products ( name ) )
-        `
-      )
+        subtotal,
+        gst_amount,
+        dealers (
+          name,
+          users ( email, phone )
+        ),
+        order_items (
+          quantity,
+          price_at_order,
+          products ( name )
+        )
+      `)
       .eq('id', orderId)
       .single();
 
-    if (error || !orderData) {
-      console.error('Error fetching order details:', error);
-      return NextResponse.json({ error: 'Order not found or database error.' }, { status: 404 });
+    if (error || !data) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    const formattedOrder = {
-      id: orderData.id,
-      total_amount: orderData.total_amount,
-      order_status: orderData.order_status,
-      created_at: orderData.created_at,
-      dealer_name: orderData.dealers?.name || 'N/A',
-      dealer_email: orderData.dealers?.users?.email || 'N/A',
-      dealer_phone: orderData.dealers?.users?.phone || null,
-      order_items: orderData.order_items.map(item => ({
-        product_name: item.products?.name || 'N/A',
-        quantity: item.quantity,
-        price_at_order: item.price_at_order,
-      })),
-    };
-
-    return NextResponse.json({ order: formattedOrder });
+    return NextResponse.json({
+      order: {
+        id: data.id,
+        total_amount: data.total_amount,
+        order_status: data.order_status,
+        created_at: data.created_at,
+        dealer_name: data.dealers?.name ?? 'N/A',
+        dealer_email: data.dealers?.users?.email ?? 'N/A',
+        dealer_phone: data.dealers?.users?.phone ?? null,
+        subtotal: data.subtotal,
+        gst_amount: data.gst_amount,
+        order_items: data?.order_items?.map((item) => ({
+          product_name: item.products?.name ?? 'N/A',
+          quantity: item.quantity,
+          price_at_order: item.price_at_order,
+        })),
+      },
+    });
   } catch (err) {
-    console.error('Unexpected error fetching order details:', err);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
+
 
 // PUT /api/admin/orders/[id] - Update order status
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {

@@ -17,41 +17,13 @@ import {
 } from 'react-icons/fi';
 
 const navItems = [
-  {
-    label: 'Dashboard',
-    href: '/admin/dashboard',
-    icon: FiHome,
-  },
-  {
-    label: 'Dealers',
-    href: '/admin/dealers',
-    icon: FiUsers,
-  },
-  {
-    label: 'Categories',
-    href: '/admin/categories',
-    icon: FiGrid,
-  },
-  {
-    label: 'Products',
-    href: '/admin/products',
-    icon: FiBox,
-  },
-  {
-    label: 'Discounts',
-    href: '/admin/discounts',
-    icon: FiPercent,
-  },
-  {
-    label: 'Visibility',
-    href: '/admin/visibility',
-    icon: FiEye,
-  },
-  {
-    label: 'Orders',
-    href: '/admin/orders',
-    icon: FiClipboard,
-  },
+  { label: 'Dashboard', href: '/admin/dashboard', icon: FiHome },
+  { label: 'Dealers', href: '/admin/dealers', icon: FiUsers },
+  { label: 'Categories', href: '/admin/categories', icon: FiGrid },
+  { label: 'Products', href: '/admin/products', icon: FiBox },
+  { label: 'Discounts', href: '/admin/discounts', icon: FiPercent },
+  { label: 'Visibility', href: '/admin/visibility', icon: FiEye },
+  { label: 'Orders', href: '/admin/orders', icon: FiClipboard },
 ];
 
 export default function AdminLayout({
@@ -73,12 +45,12 @@ export default function AdminLayout({
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
+    <div className="flex h-screen overflow-hidden bg-gray-100">
+      {/* Sidebar (NO SCROLL) */}
       <aside
         className={`${
           collapsed ? 'w-18' : 'w-64'
-        } bg-gray-900 text-white transition-all duration-300 flex flex-col`}
+        } h-screen bg-gray-900 text-white transition-all duration-300 flex flex-col`}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
@@ -110,8 +82,7 @@ export default function AdminLayout({
                     isActive
                       ? 'bg-indigo-600 text-white shadow'
                       : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }
-                `}
+                  }`}
               >
                 <Icon size={22} />
                 {!collapsed && (
@@ -136,9 +107,9 @@ export default function AdminLayout({
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Main Content (ONLY this scrolls) */}
       <main className="flex-1 p-6 overflow-y-auto">
-        <div className="bg-white rounded-xl shadow-sm p-6 min-h-[calc(100vh-3rem)]">
+        <div className="bg-white rounded-xl shadow-sm p-6 min-h-full">
           {children}
         </div>
       </main>

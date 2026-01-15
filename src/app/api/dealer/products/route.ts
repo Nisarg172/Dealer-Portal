@@ -34,81 +34,94 @@ async function getDealerIdFromAuth() {
 }
 
 // GET /api/dealer/products - Fetch all visible and discounted products for a dealer
+
 export async function GET(req: NextRequest) {
   const dealerId = await getDealerIdFromAuth();
+
   if (!dealerId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const search = searchParams.get('search') || '';
+  const categoryId = searchParams.get('category_id');
 
   try {
-    // Fetch all active products and their categories
-    const { data: products, error: productsError } = await supabase
+    /* -------- Fetch products -------- */
+    let query = supabase
       .from('products')
-      .select(
-        `
+      .select(`
         id,
         name,
         base_price,
         description,
-        is_active,
+        image_urls,
         category: categories ( id, name )
-        `
-      )
+      `)
       .eq('is_active', true)
       .is('deleted_at', null)
-      .order('name', { ascending: true });
+      .order('name');
 
-    if (productsError) {
-      console.error('Error fetching products for dealer:', productsError);
-      return NextResponse.json({ error: 'Failed to fetch products.' }, { status: 500 });
+    if (search) {
+      query = query.ilike('name', `%${search}%`);
     }
 
-    // Fetch dealer-specific hidden categories and products
+    if (categoryId) {
+      query = query.eq('category_id', categoryId);
+    }
+
+    const { data: products, error } = await query;
+    if (error) throw error;
+
+    /* -------- Hidden logic -------- */
     const { data: hiddenCategories } = await supabase
       .from('dealer_hidden_categories')
       .select('category_id')
       .eq('dealer_id', dealerId);
-    const hiddenCategoryIds = new Set(hiddenCategories?.map(c => c.category_id) || []);
 
     const { data: hiddenProducts } = await supabase
       .from('dealer_hidden_products')
       .select('product_id')
       .eq('dealer_id', dealerId);
-    const hiddenProductIds = new Set(hiddenProducts?.map(p => p.product_id) || []);
 
-    // Filter products based on visibility and calculate discounted prices
-    const dealerProducts = await Promise.all(products.map(async (product) => {
-      const categoryId = product.category?.id; // Adjust based on your category join structure
+    const hiddenCategoryIds = new Set(hiddenCategories?.map(c => c.category_id));
+    const hiddenProductIds = new Set(hiddenProducts?.map(p => p.product_id));
 
-      // Apply visibility rules
-      if (hiddenProductIds.has(product.id) || (categoryId && hiddenCategoryIds.has(categoryId))) {
-        return null; // Product or its category is hidden
-      }
+    /* -------- Build dealer product list -------- */
+    const result = await Promise.all(
+      products.map(async (product) => {
+        if (
+          hiddenProductIds.has(product.id) ||
+          hiddenCategoryIds.has(product.category?.id)
+        ) {
+          return null;
+        }
 
-      // Calculate discounted price
-      const discountedPrice = await calculateDealerPrice({
-        id: product.id,
-        base_price: product.base_price,
-        category_id: categoryId || '',
-      }, { dealerId });
+        const discountedPrice = await calculateDealerPrice(
+          {
+            id: product.id,
+            base_price: product.base_price,
+            category_id: product.category?.id,
+          },
+          { dealerId }
+        );
 
-      return {
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        base_price: product.base_price,
-        discounted_price: discountedPrice,
-        category_name: product.category?.name,
-        // Add image_url here if available from DB
-      };
-    }));
+        return {
+          id: product.id,
+          name: product.name,
+          base_price: product.base_price,
+          discounted_price: discountedPrice,
+          category_name: product.category?.name,
+          image_url: product.image_urls?.[0] || null,
+        };
+      })
+    );
 
-    const filteredDealerProducts = dealerProducts.filter(p => p !== null);
-
-    return NextResponse.json({ products: filteredDealerProducts });
+    return NextResponse.json({
+      products: result.filter(Boolean),
+    });
   } catch (err) {
-    console.error('Unexpected error fetching dealer products:', err);
+    console.error(err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -7,11 +7,14 @@ import { useState, useEffect } from 'react';
 
 type CreateProductFormInputs = {
   name: string;
-  category_id: string; // Changed to category_id to link with backend
+  category_id: string;
   base_price: number;
   description: string;
-  // images: FileList; // Assuming file upload for images
   status: 'active' | 'inactive';
+
+  product_image: FileList;
+  datasheet_url: string;
+  product_url: string;
 };
 
 type Category = {
@@ -21,22 +24,27 @@ type Category = {
 
 export default function CreateProductPage() {
   const router = useRouter();
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<CreateProductFormInputs>();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<CreateProductFormInputs>();
+
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [fetchingCategories, setFetchingCategories] = useState(true);
-  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
+  /* ---------------- Fetch Categories ---------------- */
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await apiClient.get('/admin/categories');
-        setCategories(response.data.data);
+        const res = await apiClient.get('/admin/categories');
+        setCategories(res.data.data);
       } catch (err: any) {
-        console.error('Error fetching categories for product form:', err);
-        setCategoryError(err.response?.data?.error || 'Failed to load categories.');
+        setError(err.response?.data?.error || 'Failed to load categories');
       } finally {
         setFetchingCategories(false);
       }
@@ -44,134 +52,181 @@ export default function CreateProductPage() {
     fetchCategories();
   }, []);
 
+  /* ---------------- Submit ---------------- */
   const onSubmit = async (data: CreateProductFormInputs) => {
     setLoading(true);
     setError(null);
-    setSuccess(null);
-    try {
-      // For image upload, you'd typically use FormData
-      // const formData = new FormData();
-      // formData.append('name', data.name);
-      // formData.append('category_id', data.category_id);
-      // ... other fields
-      // if (data.images && data.images.length > 0) {
-      //   formData.append('image', data.images[0]); // Assuming single image upload
-      // }
 
-      const response = await apiClient.post('/admin/products', data);
-      if (response.data.success) {
-        setSuccess('Product created successfully!');
-        reset(); // Clear form after successful submission
-        router.push('/admin/products'); // Redirect back to product list
+    try {
+      const formData = new FormData();
+
+      formData.append('name', data.name);
+      formData.append('category_id', data.category_id);
+      formData.append('base_price', data.base_price.toString());
+      formData.append('description', data.description);
+      formData.append('status', data.status);
+
+      formData.append('datasheet_url', data.datasheet_url);
+      formData.append('product_url', data.product_url);
+
+      if (data.product_image?.[0]) {
+        formData.append('product_image', data.product_image[0]);
+      }
+
+      const res = await apiClient.post('/admin/products', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      if (res.data.success) {
+        reset();
+        router.push('/admin/products');
       } else {
-        setError(response.data.error || 'Failed to create product.');
+        setError(res.data.error || 'Failed to create product');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'An unexpected error occurred.');
+      setError(err.response?.data?.error || 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
-  if (fetchingCategories) {
-    return <div className="container mx-auto px-4 py-8">Loading categories...</div>;
-  }
+  if (fetchingCategories)
+    return <div className="p-8">Loading categories...</div>;
 
-  if (categoryError) {
-    return <div className="container mx-auto px-4 py-8 text-red-600">Error loading categories: {categoryError}</div>;
-  }
-
+  /* ---------------- UI ---------------- */
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Create New Product</h1>
-      <div className="bg-white p-6 rounded-lg shadow-md max-w-lg mx-auto">
+      <h1 className="text-3xl font-bold mb-6">Create New Product</h1>
+
+      <div className="bg-white p-6 rounded-lg shadow-md max-w-xl mx-auto">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
+          {/* Product Name */}
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Product Name</label>
+            <label className="block text-sm font-medium">Product Name</label>
             <input
-              type="text"
-              id="name"
               {...register('name', { required: 'Product name is required' })}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="mt-1 w-full border rounded px-3 py-2"
             />
-            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
+            {errors.name && (
+              <p className="text-sm text-red-600">{errors.name.message}</p>
+            )}
           </div>
 
+          {/* Category */}
           <div>
-            <label htmlFor="category_id" className="block text-sm font-medium text-gray-700">Category</label>
+            <label className="block text-sm font-medium">Category</label>
             <select
-              id="category_id"
               {...register('category_id', { required: 'Category is required' })}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="mt-1 w-full border rounded px-3 py-2"
             >
-              <option value="">Select a category</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>{category.name}</option>
+              <option value="">Select category</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
               ))}
             </select>
-            {errors.category_id && <p className="mt-1 text-sm text-red-600">{errors.category_id.message}</p>}
+            {errors.category_id && (
+              <p className="text-sm text-red-600">
+                {errors.category_id.message}
+              </p>
+            )}
           </div>
 
+          {/* Base Price */}
           <div>
-            <label htmlFor="base_price" className="block text-sm font-medium text-gray-700">Base Price</label>
+            <label className="block text-sm font-medium">Base Price</label>
             <input
               type="number"
-              id="base_price"
               step="0.01"
-              {...register('base_price', { required: 'Base price is required', valueAsNumber: true, min: { value: 0, message: 'Price cannot be negative' } })}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              {...register('base_price', {
+                required: 'Base price is required',
+                valueAsNumber: true,
+                min: 0,
+              })}
+              className="mt-1 w-full border rounded px-3 py-2"
             />
-            {errors.base_price && <p className="mt-1 text-sm text-red-600">{errors.base_price.message}</p>}
           </div>
 
+          {/* Description */}
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+            <label className="block text-sm font-medium">Description</label>
             <textarea
-              id="description"
-              {...register('description', { required: 'Description is required' })}
               rows={4}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            ></textarea>
-            {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>}
+              {...register('description', {
+                required: 'Description is required',
+              })}
+              className="mt-1 w-full border rounded px-3 py-2"
+            />
           </div>
 
-          {/* Image upload placeholder */}
-          {/* <div>
-            <label htmlFor="images" className="block text-sm font-medium text-gray-700">Product Images</label>
+          {/* Product Image */}
+          <div>
+            <label className="block text-sm font-medium">
+              Product Image
+            </label>
             <input
               type="file"
-              id="images"
-              {...register('images')}
-              multiple
-              className="mt-1 block w-full text-sm text-gray-500
-              file:mr-4 file:py-2 file:px-4
-              file:rounded-full file:border-0
-              file:text-sm file:font-semibold
-              file:bg-blue-50 file:text-blue-700
-              hover:file:bg-blue-100"
+              accept="image/*"
+              {...register('product_image', {
+                required: 'Product image is required',
+              })}
+              className="mt-1 w-full"
             />
-          </div> */}
+            {errors.product_image && (
+              <p className="text-sm text-red-600">
+                {errors.product_image.message}
+              </p>
+            )}
+          </div>
 
+          {/* Datasheet URL */}
           <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status</label>
+            <label className="block text-sm font-medium">
+              Datasheet URL
+            </label>
+            <input
+              type="url"
+              placeholder="https://example.com/datasheet.pdf"
+              {...register('datasheet_url')}
+              className="mt-1 w-full border rounded px-3 py-2"
+            />
+          </div>
+
+          {/* Product Website URL */}
+          <div>
+            <label className="block text-sm font-medium">
+              Product Website URL
+            </label>
+            <input
+              type="url"
+              placeholder="https://product-website.com"
+              {...register('product_url')}
+              className="mt-1 w-full border rounded px-3 py-2"
+            />
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="block text-sm font-medium">Status</label>
             <select
-              id="status"
-              {...register('status', { required: 'Status is required' })}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              {...register('status', { required: true })}
+              className="mt-1 w-full border rounded px-3 py-2"
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
-            {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status.message}</p>}
           </div>
 
-          {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-          {success && <p className="text-sm text-green-600 text-center">{success}</p>}
+          {error && (
+            <p className="text-sm text-red-600 text-center">{error}</p>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create Product'}
           </button>

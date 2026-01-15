@@ -6,7 +6,6 @@ export async function GET() {
     const { data: categories, error } = await supabase
       .from('categories')
       .select('id, name, description, is_active')
-      .eq('is_active', true) // Only active categories
       .is('deleted_at', null); // Not soft-deleted
 
     if (error) {

@@ -55,7 +55,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         name,
         description,
         base_price,
+        image_urls,
         is_active,
+        product_url,
+        datasheet_url,
         category: categories ( id, name )
         `
       )
@@ -144,6 +147,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         base_price: productData.base_price,
         discounted_price: discountedPrice,
         category_name: productData.category?.name,
+        product_url: productData.product_url || null,
+        datasheet_url: productData.datasheet_url || null,
+        images_urls: productData.image_urls || [],
         // Add image_url here if available from DB
       },
     });

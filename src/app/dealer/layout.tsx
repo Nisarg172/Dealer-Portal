@@ -55,12 +55,14 @@ export default function DealerLayout({
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
+    /* 🔒 Lock entire layout height & disable page scroll */
+    <div className="flex h-screen overflow-hidden bg-gray-100">
+      
+      {/* Sidebar (NO SCROLL) */}
       <aside
         className={`${
           collapsed ? 'w-18' : 'w-64'
-        } bg-gray-900 text-white transition-all duration-300 flex flex-col`}
+        } h-screen bg-gray-900 text-white transition-all duration-300 flex flex-col`}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
@@ -118,9 +120,9 @@ export default function DealerLayout({
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Main Content (ONLY this scrolls) */}
       <main className="flex-1 p-6 overflow-y-auto">
-        <div className="bg-white rounded-xl shadow-sm p-6 min-h-[calc(100vh-3rem)]">
+        <div className="bg-white rounded-xl shadow-sm p-6 min-h-full">
           {children}
         </div>
       </main>

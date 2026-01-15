@@ -1,67 +1,156 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import apiClient from '@/lib/axios';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import apiClient from "@/lib/axios";
 
 type Product = {
   id: string;
   name: string;
-  category_name: string; // Assuming API returns category name directly or as a nested object
-  discounted_price: number; // Price already discounted by the backend
-  // image_url: string; // Placeholder for product image
+  category_name: string;
+  base_price: number;
+  discounted_price: number;
+  image_url: string | null;
+};
+
+type Category = {
+  id: string;
+  name: string;
 };
 
 export default function DealerProductListingPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
+  /* -------- Fetch categories -------- */
+  useEffect(() => {
+    apiClient.get("/categories").then((res) => {
+      setCategories(res.data.categories);
+    });
+  }, []);
+
+  /* -------- Fetch products -------- */
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
-      setError(null);
-      try {
-        const response = await apiClient.get('/dealer/products'); // API returns allowed and discounted products
-        setProducts(response.data.products);
-      } catch (err: any) {
-        console.error('Error fetching dealer products:', err);
-        setError(err.response?.data?.error || 'Failed to fetch products.');
-      } finally {
-        setLoading(false);
-      }
+      const res = await apiClient.get("/dealer/products", {
+        params: {
+          search,
+          category_id: activeCategory,
+        },
+      });
+      setProducts(res.data.products);
+      setLoading(false);
     };
+
     fetchProducts();
-  }, []);
+  }, [search, activeCategory]);
 
-  if (loading) {
-    return <div className="container mx-auto px-4 py-8">Loading products...</div>;
-  }
-
-  if (error) {
-    return <div className="container mx-auto px-4 py-8 text-red-600">Error: {error}</div>;
-  }
+  /* -------- Helper to calculate discount percentage -------- */
+  const getDiscountPercentage = (base: number, discounted: number) => {
+    return Math.round(((base - discounted) / base) * 100);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Available Products</h1>
-      
-      {products.length === 0 ? (
-        <p className="text-gray-700">No products found. Please check your visibility settings or contact admin.</p>
+      <h1 className="text-3xl font-bold mb-6">Available Products</h1>
+
+      {/* Search */}
+      <input
+        type="text"
+        placeholder="Search products..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full mb-4 px-4 py-2 border rounded"
+      />
+
+      {/* Category Tabs */}
+      <div className="flex gap-2 mb-6 flex-wrap">
+        <button
+          onClick={() => setActiveCategory(null)}
+          className={`px-4 py-1 rounded ${
+            !activeCategory ? "bg-blue-600 text-white" : "bg-gray-200"
+          }`}
+        >
+          All
+        </button>
+
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            className={`px-4 py-1 rounded ${
+              activeCategory === cat.id
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200"
+            }`}
+          >
+            {cat.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Products */}
+      {loading ? (
+        <p>Loading products...</p>
+      ) : products.length === 0 ? (
+        <p>No products found</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {products.map((product) => (
-            <Link href={`/dealer/product/${product.id}`} key={product.id}>
-              <div className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200">
-                {/* <img src={product.image_url || '/placeholder-product.png'} alt={product.name} className="w-full h-48 object-cover" /> */}
-                <div className="p-4">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-1">{product.name}</h2>
-                  <p className="text-gray-600 text-sm mb-2">{product.category_name}</p>
-                  <p className="text-xl font-bold text-blue-600">₹{product.discounted_price.toFixed(2)}</p>
+          {products.map((product) => {
+            const hasDiscount = product.discounted_price < product.base_price;
+
+            return (
+              <Link href={`/dealer/product/${product.id}`} key={product.id}>
+                <div className="bg-white rounded shadow hover:shadow-lg transition cursor-pointer">
+                  <img
+                    src={product.image_url || "/images/product_dummy.png"}
+                    alt={product.name}
+                    className="h-48 w-full object-cover rounded-t"
+                  />
+
+                  <div className="p-4">
+                    <h2 className="font-semibold">{product.name}</h2>
+                    <p className="text-sm text-gray-500">
+                      {product.category_name}
+                    </p>
+                    {/* Price */}
+                    <div className="mt-2 flex flex-col items-start gap-1">
+                      {hasDiscount ? (
+                        <>
+                          <p className="text-lg font-bold text-blue-600">
+                            ₹{product.discounted_price.toFixed(2)}
+                          </p>
+
+                          <div className="flex gap-x-2">
+                            <span className="text-gray-400 line-through text-sm">
+                              ₹{product.base_price.toFixed(2)}
+                              {"  "}
+                            </span>{" "}
+
+                            <span className="text-sm text-green-600 font-semibold">
+                              {getDiscountPercentage(
+                                product.base_price,
+                                product.discounted_price
+                              )}
+                              % off
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-lg font-bold text-blue-600">
+                          ₹{product.base_price.toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

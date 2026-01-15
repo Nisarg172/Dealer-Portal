@@ -1,152 +1,254 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import apiClient from '@/lib/axios';
 
+/* -------------------- Types -------------------- */
 type OrderItem = {
   product_name: string;
   quantity: number;
-  price_at_order: number; // Price after discount at the time of order
+  price_at_order: number;
 };
+
+type OrderStatus = 'pending' | 'approved' | 'rejected' | 'delivered';
 
 type OrderDetails = {
   id: string;
   dealer_name: string;
   dealer_email: string;
   dealer_phone: string | null;
+
+  subtotal: number;
+  gst_percentage: number;
+  gst_amount: number;
   total_amount: number;
-  status: 'pending' | 'approved' | 'rejected' | 'shipped' | 'delivered';
+
+  order_status: OrderStatus;
   created_at: string;
   order_items: OrderItem[];
 };
 
-const statusOptions: OrderDetails['status'][] = ['pending', 'approved', 'rejected', 'shipped', 'delivered'];
+/* -------------------- Constants -------------------- */
+const statusOptions: OrderStatus[] = [
+  'pending',
+  'approved',
+  'rejected',
+  'delivered',
+];
 
+const statusColor = (status: OrderStatus) => {
+  switch (status) {
+    case 'approved':
+      return 'bg-green-100 text-green-700';
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-700';
+    case 'rejected':
+      return 'bg-red-100 text-red-700';
+    case 'delivered':
+      return 'bg-emerald-100 text-emerald-700';
+    default:
+      return 'bg-gray-100 text-gray-700';
+  }
+};
+
+/* -------------------- Page -------------------- */
 export default function AdminOrderDetailsPage() {
-  const router = useRouter();
-  const params = useParams();
-  const { id: orderId } = params as { id: string };
+  const { id: orderId } = useParams() as { id: string };
 
-  const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
+  const [order, setOrder] = useState<OrderDetails | null>(null);
+  const [currentStatus, setCurrentStatus] =
+    useState<OrderStatus>('pending');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentStatus, setCurrentStatus] = useState<OrderDetails['status'] | ''>('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  /* -------------------- Fetch Order -------------------- */
   useEffect(() => {
-    const fetchOrderDetails = async () => {
-      setLoading(true);
-      setError(null);
+    const fetchOrder = async () => {
       try {
-        const response = await apiClient.get(`/admin/orders/${orderId}`); // Assuming GET /api/admin/orders/[id] exists
-        setOrderDetails(response.data.order);
-        setCurrentStatus(response.data.order.status);
+        const res = await apiClient.get(`/admin/orders/${orderId}`);
+        setOrder(res.data.order);
+        setCurrentStatus(res.data.order.order_status);
       } catch (err: any) {
-        console.error('Error fetching order details:', err);
-        setError(err.response?.data?.error || 'Failed to fetch order details.');
+        setError(err.response?.data?.error || 'Failed to fetch order');
       } finally {
         setLoading(false);
       }
     };
 
-    if (orderId) {
-      fetchOrderDetails();
-    }
+    if (orderId) fetchOrder();
   }, [orderId]);
 
-  const handleStatusChange = async (newStatus: OrderDetails['status']) => {
-    if (updatingStatus) return;
-    if (!confirm(`Are you sure you want to change order status to ${newStatus}?`)) {
-      return;
-    }
+  /* -------------------- Update Status -------------------- */
+  const handleStatusChange = async (status: OrderStatus) => {
+    if (!confirm(`Change order status to ${status.toUpperCase()}?`)) return;
 
     setUpdatingStatus(true);
-    setError(null);
     try {
-      await apiClient.put(`/admin/orders/${orderId}`, { order_status: newStatus }); // Assuming PUT /api/admin/orders/[id] for status update
-      setOrderDetails(prev => prev ? { ...prev, status: newStatus } : null);
-      setCurrentStatus(newStatus);
+      await apiClient.put(`/admin/orders/${orderId}`, {
+        order_status: status,
+      });
+
+      setCurrentStatus(status);
+      setOrder((prev) =>
+        prev ? { ...prev, order_status: status } : prev
+      );
     } catch (err: any) {
-      console.error('Error updating order status:', err);
-      setError(err.response?.data?.error || 'Failed to update order status.');
+      setError(err.response?.data?.error || 'Failed to update status');
     } finally {
       setUpdatingStatus(false);
     }
   };
 
-  if (loading) {
-    return <div className="container mx-auto px-4 py-8">Loading order details...</div>;
-  }
+  /* -------------------- States -------------------- */
+  if (loading)
+    return <div className="p-10 text-center">Loading...</div>;
 
-  if (error) {
-    return <div className="container mx-auto px-4 py-8 text-red-600">Error: {error}</div>;
-  }
+  if (error)
+    return (
+      <div className="p-10 text-center text-red-600">{error}</div>
+    );
 
-  if (!orderDetails) {
-    return <div className="container mx-auto px-4 py-8 text-gray-700">Order not found.</div>;
-  }
+  if (!order)
+    return (
+      <div className="p-10 text-center">Order not found</div>
+    );
 
+  /* -------------------- UI -------------------- */
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Order Details: {orderDetails.id}</h1>
-      
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Dealer Information</h2>
-        <p><strong>Name:</strong> {orderDetails.dealer_name}</p>
-        <p><strong>Email:</strong> {orderDetails.dealer_email}</p>
-        <p><strong>Phone:</strong> {orderDetails.dealer_phone || 'N/A'}</p>
+    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">
+            Order #{order.id}
+          </h1>
+          <p className="text-sm text-gray-500">
+            {new Date(order.created_at).toLocaleString()}
+          </p>
+        </div>
+
+        <span
+          className={`px-4 py-1 rounded-full text-sm font-medium ${statusColor(
+            order.order_status
+          )}`}
+        >
+          {order.order_status.toUpperCase()}
+        </span>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Order Summary</h2>
-        <p><strong>Order Date:</strong> {new Date(orderDetails.created_at).toLocaleDateString()}</p>
-        <p><strong>Total Amount:</strong> ₹{orderDetails.total_amount.toFixed(2)}</p>
-        <div className="flex items-center mt-2">
-          <p className="mr-2"><strong>Status:</strong></p>
+      {/* Info Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        {/* Dealer */}
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h3 className="font-semibold mb-2">Dealer</h3>
+          <p>{order.dealer_name}</p>
+          <p>{order.dealer_email}</p>
+          <p>{order.dealer_phone || 'N/A'}</p>
+        </div>
+
+        {/* Price Summary */}
+        <div className="bg-white p-6 rounded-xl shadow space-y-2">
+          <h3 className="font-semibold mb-3">Price Summary</h3>
+
+          <div className="flex justify-between text-sm">
+            <span>Subtotal</span>
+            <span>₹{order.subtotal.toFixed(2)}</span>
+          </div>
+
+          <div className="flex justify-between text-sm">
+            <span>GST ({order.gst_percentage}%)</span>
+            <span>₹{order.gst_amount.toFixed(2)}</span>
+          </div>
+
+          <div className="border-t pt-2 flex justify-between font-bold text-green-600">
+            <span>Total</span>
+            <span>₹{order.total_amount.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Status Update */}
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h3 className="font-semibold mb-2">Update Status</h3>
           <select
             value={currentStatus}
-            onChange={(e) => handleStatusChange(e.target.value as OrderDetails['status'])}
             disabled={updatingStatus}
-            className="border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            onChange={(e) =>
+              handleStatusChange(e.target.value as OrderStatus)
+            }
+            className="w-full border rounded px-3 py-2"
           >
-            {statusOptions.map(status => (
-              <option key={status} value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>
+            {statusOptions.map((s) => (
+              <option key={s} value={s}>
+                {s.toUpperCase()}
+              </option>
             ))}
           </select>
-          {updatingStatus && <span className="ml-2 text-sm text-blue-600">Updating...</span>}
-          {error && <p className="text-sm text-red-600 ml-4">{error}</p>}
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Order Items</h2>
-        {orderDetails.order_items.length === 0 ? (
-          <p className="text-gray-700">No items in this order.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full leading-normal">
-              <thead>
-                <tr>
-                  <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
-                  <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Quantity</th>
-                  <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price at Order</th>
-                  <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orderDetails.order_items.map((item, index) => (
-                  <tr key={index}>
-                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{item.product_name}</td>
-                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{item.quantity}</td>
-                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">₹{item.price_at_order.toFixed(2)}</td>
-                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">₹{(item.quantity * item.price_at_order).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      {/* Order Items */}
+      <div className="bg-white rounded-xl shadow overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left">Product</th>
+              <th className="px-6 py-3 text-center">Qty</th>
+              <th className="px-6 py-3 text-right">Price</th>
+              <th className="px-6 py-3 text-right">Total</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {order.order_items.map((item, i) => (
+              <tr key={i} className="border-t">
+                <td className="px-6 py-3">
+                  {item.product_name}
+                </td>
+                <td className="px-6 py-3 text-center">
+                  {item.quantity}
+                </td>
+                <td className="px-6 py-3 text-right">
+                  ₹{item.price_at_order.toFixed(2)}
+                </td>
+                <td className="px-6 py-3 text-right font-semibold">
+                  ₹{(item.quantity * item.price_at_order).toFixed(2)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+
+          {/* Totals */}
+          <tfoot className="bg-gray-50 font-semibold">
+            <tr>
+              <td colSpan={3} className="px-6 py-3 text-right">
+                Subtotal
+              </td>
+              <td className="px-6 py-3 text-right">
+                ₹{order.subtotal.toFixed(2)}
+              </td>
+            </tr>
+            <tr>
+              <td colSpan={3} className="px-6 py-3 text-right">
+                GST ({order.gst_percentage}%)
+              </td>
+              <td className="px-6 py-3 text-right">
+                ₹{order.gst_amount.toFixed(2)}
+              </td>
+            </tr>
+            <tr className="text-green-600">
+              <td colSpan={3} className="px-6 py-3 text-right">
+                Total Payable
+              </td>
+              <td className="px-6 py-3 text-right">
+                ₹{order.total_amount.toFixed(2)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </div>
   );
