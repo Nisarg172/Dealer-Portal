@@ -71,8 +71,7 @@ export async function POST(req: NextRequest) {
     const { data: newCategory, error } = await supabase
       .from('categories')
       .insert({ name })
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('Error creating category:', error);

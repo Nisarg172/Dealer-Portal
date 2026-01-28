@@ -1,16 +1,30 @@
 "use client";
 
-import { useDebounce } from "@/hooks/useDebounce";
+import {
+  forwardRef,
+  useImperativeHandle,
+  useState,
+} from "react";
 import { useServerTable } from "@/hooks/useServerTable";
-import { useState } from "react";
 import { FaFilter } from "react-icons/fa";
+
+/* ================= TYPES ================= */
+
+export type FilterOption = {
+  label: string;
+  value: string;
+};
 
 export type Column<T> = {
   label: string;
   key?: keyof T;
   sortable?: boolean;
-  render?: (row: T) => React.ReactNode;
+  render?: (row: T, refresh: () => void) => React.ReactNode;
   filterOption?: FilterOption[];
+};
+
+export type DataTableRef = {
+  refresh: () => void;
 };
 
 type Props<T> = {
@@ -19,16 +33,12 @@ type Props<T> = {
   defaultSortBy: string;
 };
 
-export type FilterOption = {
-  label: string;
-  value: string;
-};
+/* ================= COMPONENT ================= */
 
-export default function DataTable<T>({
-  columns,
-  fetcher,
-  defaultSortBy,
-}: Props<T>) {
+function DataTableInner<T>(
+  { columns, fetcher, defaultSortBy }: Props<T>,
+  ref: React.Ref<DataTableRef>
+) {
   const {
     data,
     loading,
@@ -42,13 +52,20 @@ export default function DataTable<T>({
     setPage,
     meta,
     handelFilterOption,
+    refresh, // 🔥 from hook
   } = useServerTable<T>(fetcher, defaultSortBy);
 
-  const debouncedSearch = useDebounce(search);
-
   const [openFilter, setOpenFilter] = useState<string | null>(null);
+
+  /* ===== expose methods to parent ===== */
+  useImperativeHandle(ref, () => ({
+    refresh,
+  }));
+
+  /* ===== sorting ===== */
   const toggleSort = (key?: keyof T) => {
     if (!key) return;
+
     const k = key as string;
 
     if (sortBy === k) {
@@ -59,8 +76,11 @@ export default function DataTable<T>({
     }
   };
 
+  /* ================= UI ================= */
+
   return (
     <div className="space-y-4">
+      {/* Search */}
       <input
         value={search}
         onChange={(e) => {
@@ -71,6 +91,7 @@ export default function DataTable<T>({
         className="border px-3 py-2 rounded w-64"
       />
 
+      {/* Table */}
       <table className="min-w-full bg-white shadow rounded">
         <thead className="bg-gray-100 text-xs uppercase">
           <tr>
@@ -83,18 +104,19 @@ export default function DataTable<T>({
                 }`}
               >
                 {c.label}
+
                 {c.key === sortBy && (sortOrder === "asc" ? " ▲" : " ▼")}
 
+                {/* Filter */}
                 {c.filterOption && (
-                  <div className="relative inline-block">
+                  <div className="relative inline-block ml-2">
                     <button
-                      type="button"
                       onClick={() =>
                         setOpenFilter(
                           openFilter === c.key ? null : (c.key as string)
                         )
                       }
-                      className="ml-2 text-gray-600 hover:text-black"
+                      className="text-gray-600 hover:text-black"
                     >
                       <FaFilter size={14} />
                     </button>
@@ -159,7 +181,7 @@ export default function DataTable<T>({
                 {columns.map((c, j) => (
                   <td key={j} className="px-4 py-3">
                     {c.render
-                      ? c.render(row)
+                      ? c.render(row, refresh) // 🔥 pass refresh here
                       : String((row as any)[c.key as string] ?? "")}
                   </td>
                 ))}
@@ -183,6 +205,7 @@ export default function DataTable<T>({
           >
             Prev
           </button>
+
           <button
             disabled={page === meta.totalPages}
             onClick={() => setPage(page + 1)}
@@ -195,3 +218,11 @@ export default function DataTable<T>({
     </div>
   );
 }
+
+/* ================= EXPORT ================= */
+
+const DataTable = forwardRef(DataTableInner) as <T>(
+  props: Props<T> & { ref?: React.Ref<DataTableRef> }
+) => React.ReactElement;
+
+export default DataTable;

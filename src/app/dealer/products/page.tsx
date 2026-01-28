@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import apiClient from "@/lib/axios";
+import Image from "next/image";
 
 type Product = {
   id: string;
@@ -106,9 +107,12 @@ export default function DealerProductListingPage() {
             return (
               <Link href={`/dealer/product/${product.id}`} key={product.id}>
                 <div className="bg-white rounded shadow hover:shadow-lg transition cursor-pointer">
-                  <img
+                  <Image
                     src={product.image_url || "/images/product_dummy.png"}
                     alt={product.name}
+                    loading="lazy"
+                    width={300}
+                    height={300}
                     className="h-48 w-full object-cover rounded-t"
                   />
 
@@ -156,3 +160,4 @@ export default function DealerProductListingPage() {
     </div>
   );
 }
+

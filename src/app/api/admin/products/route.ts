@@ -21,7 +21,6 @@ export async function GET(req: NextRequest) {
     const filterKey:string|null = searchParams.get('filter[key]')??null ;
     const filterValue:string|null = searchParams.get('filter[value]')??null ;
 
-    console.log('Filter Param:', { key: filterKey, value: filterValue });
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;

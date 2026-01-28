@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import apiClient from '@/lib/axios';
+import { FiArrowLeft } from 'react-icons/fi';
 
 type EditProductFormInputs = {
   name: string;
@@ -133,7 +134,15 @@ const onSubmit = async (data: EditProductFormInputs) => {
 
   /* ---------------- UI ---------------- */
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-4">
+      <button
+        onClick={() => router.back()}
+        className="mb-2 inline-flex items-center gap-2 text-lg font-medium text-gray-600 hover:text-blue-600 transition"
+      >
+        <FiArrowLeft className="text-lg" />
+        Back
+      </button>
+    
       <h1 className="text-3xl font-bold mb-6">Edit Product</h1>
 
       <div className="bg-white p-6 rounded-lg shadow-md max-w-xl mx-auto">
@@ -258,3 +267,4 @@ const onSubmit = async (data: EditProductFormInputs) => {
     </div>
   );
 }
+

@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import apiClient from '@/lib/axios';
+import { FiArrowLeft } from 'react-icons/fi';
 
 /* -------------------- Types -------------------- */
 type OrderItem = {
@@ -55,6 +56,7 @@ const statusColor = (status: OrderStatus) => {
 /* -------------------- Page -------------------- */
 export default function AdminOrderDetailsPage() {
   const { id: orderId } = useParams() as { id: string };
+  const router = useRouter();
 
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [currentStatus, setCurrentStatus] =
@@ -117,7 +119,14 @@ export default function AdminOrderDetailsPage() {
 
   /* -------------------- UI -------------------- */
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 py-4 space-y-6">
+       <button
+        onClick={() => router.back()}
+        className="mb-2 inline-flex items-center gap-2 text-lg font-medium text-gray-600 hover:text-blue-600 transition"
+      >
+        <FiArrowLeft className="text-lg" />
+        Back
+      </button>
 
       {/* Header */}
       <div className="flex justify-between items-center">
@@ -253,3 +262,4 @@ export default function AdminOrderDetailsPage() {
     </div>
   );
 }
+

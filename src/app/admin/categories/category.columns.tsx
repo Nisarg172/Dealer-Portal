@@ -8,7 +8,9 @@ export type Category = {
   name: string;
 };
 
-export const categoryColumns: Column<Category>[] = [
+export const categoryColumns = (
+  onDelete: (id: string) => void
+):Column<Category>[] => [
   {
     label: 'Name',
     key: 'name',
@@ -27,7 +29,7 @@ export const categoryColumns: Column<Category>[] = [
 
         <button
           onClick={() =>
-            alert(`Delete category ${category.id}`)
+            onDelete(category.id)
           }
           className="text-red-600 hover:underline"
         >

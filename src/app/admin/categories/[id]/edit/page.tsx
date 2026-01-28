@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import apiClient from '@/lib/axios';
+import { FiArrowLeft } from 'react-icons/fi';
 
 type EditCategoryFormInputs = {
   name: string;
@@ -74,8 +75,15 @@ export default function EditCategoryPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Edit Category: {id}</h1>
+    <div className="container mx-auto px-4 py-4">
+        <button
+              onClick={() => router.back()}
+              className="mb-2 inline-flex items-center gap-2 text-lg font-medium text-gray-600 hover:text-blue-600 transition"
+            >
+              <FiArrowLeft className="text-lg" />
+              Back
+            </button>
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">Edit Category</h1>
       <div className="bg-white p-6 rounded-lg shadow-md max-w-lg mx-auto">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
@@ -104,3 +112,4 @@ export default function EditCategoryPage() {
     </div>
   );
 }
+

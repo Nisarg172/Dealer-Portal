@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import apiClient from '@/lib/axios';
-import DataTable, { FilterOption } from '@/components/common/Table/DataTable';
+import DataTable, { DataTableRef, FilterOption } from '@/components/common/Table/DataTable';
 import { productColumns } from './product.columns';
 import { Product } from './product.columns';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 export default function AdminProductsPage() {
 
   const [categories, setCategories] =  useState<FilterOption[]>([]);
+  const tableRef = useRef<DataTableRef>(null);
   /* -------------------------
      Fetcher (backend driven)
   -------------------------- */
@@ -39,6 +40,7 @@ export default function AdminProductsPage() {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
     await apiClient.delete(`/admin/products/${id}`);
+    tableRef.current?.refresh();
   };
 
   useEffect(() => {
@@ -66,6 +68,7 @@ export default function AdminProductsPage() {
         columns={productColumns(handleDelete,categories)}
         fetcher={fetchProducts}
         defaultSortBy="name"
+        ref={tableRef}
       />
     </div>
   );
