@@ -113,6 +113,7 @@ export default function DealerProductListingPage() {
                     loading="lazy"
                     width={300}
                     height={300}
+                    quality={50}
                     className="h-48 w-full object-cover rounded-t"
                   />
 

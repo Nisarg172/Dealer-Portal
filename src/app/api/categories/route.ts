@@ -29,6 +29,8 @@ export async function GET() {
     const { data: categories, error } = await supabase
       .from("categories")
       .select("*")
+      .is('deleted_at', null)
+      .eq("is_active",true)
       .not("id", "in", `(${hiddenIds.join(",")})`);
 
     if (error) {
