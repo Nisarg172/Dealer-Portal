@@ -1,12 +1,13 @@
 "use client";
 
-import {
-  forwardRef,
-  useImperativeHandle,
-  useState,
-} from "react";
+import { forwardRef, useImperativeHandle, useState } from "react";
 import { useServerTable } from "@/hooks/useServerTable";
-import { FaFilter } from "react-icons/fa";
+import { 
+  FiSearch, FiFilter, FiChevronLeft, FiChevronRight, 
+  FiChevronUp, FiChevronDown, FiMoreVertical, FiRefreshCw, 
+  FiBox
+} from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
 
 /* ================= TYPES ================= */
 
@@ -52,22 +53,18 @@ function DataTableInner<T>(
     setPage,
     meta,
     handelFilterOption,
-    refresh, // 🔥 from hook
+    refresh,
   } = useServerTable<T>(fetcher, defaultSortBy);
 
   const [openFilter, setOpenFilter] = useState<string | null>(null);
 
-  /* ===== expose methods to parent ===== */
   useImperativeHandle(ref, () => ({
     refresh,
   }));
 
-  /* ===== sorting ===== */
   const toggleSort = (key?: keyof T) => {
     if (!key) return;
-
     const k = key as string;
-
     if (sortBy === k) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
@@ -76,150 +73,172 @@ function DataTableInner<T>(
     }
   };
 
-  /* ================= UI ================= */
-
   return (
-    <div className="space-y-4">
-      {/* Search */}
-      <input
-        value={search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          setPage(1);
-        }}
-        placeholder="Search..."
-        className="border px-3 py-2 rounded w-64"
-      />
+    <div className="space-y-6">
+      {/* Search and Action Bar */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="relative group w-full sm:w-80">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+          <input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search records..."
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all text-sm"
+          />
+        </div>
+        
+        <button 
+          onClick={() => refresh()} 
+          className="p-2.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all border border-slate-200"
+          title="Refresh Data"
+        >
+          <FiRefreshCw className={loading ? "animate-spin" : ""} />
+        </button>
+      </div>
 
-      {/* Table */}
-      <table className="min-w-full bg-white shadow rounded">
-        <thead className="bg-gray-100 text-xs uppercase">
-          <tr>
-            {columns.map((c, i) => (
-              <th
-                key={i}
-                onClick={() => c.sortable && toggleSort(c.key)}
-                className={`px-4 py-3 text-left ${
-                  c.sortable ? "cursor-pointer" : ""
-                }`}
-              >
-                {c.label}
+      {/* Table Container */}
+      <div className="relative bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-200">
+                {columns.map((c, i) => (
+                  <th
+                    key={i}
+                    className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span 
+                        onClick={() => c.sortable && toggleSort(c.key)}
+                        className={`flex items-center gap-1 ${c.sortable ? "cursor-pointer hover:text-indigo-600 transition-colors" : ""}`}
+                      >
+                        {c.label}
+                        {c.sortable && (
+                          <span className="flex flex-col text-[8px] opacity-40">
+                            <FiChevronUp className={sortBy === c.key && sortOrder === "asc" ? "text-indigo-600 opacity-100 scale-125" : ""} />
+                            <FiChevronDown className={sortBy === c.key && sortOrder === "desc" ? "text-indigo-600 opacity-100 scale-125" : ""} />
+                          </span>
+                        )}
+                      </span>
 
-                {c.key === sortBy && (sortOrder === "asc" ? " ▲" : " ▼")}
-
-                {/* Filter */}
-                {c.filterOption && (
-                  <div className="relative inline-block ml-2">
-                    <button
-                      onClick={() =>
-                        setOpenFilter(
-                          openFilter === c.key ? null : (c.key as string)
-                        )
-                      }
-                      className="text-gray-600 hover:text-black"
-                    >
-                      <FaFilter size={14} />
-                    </button>
-
-                    {openFilter === c.key && (
-                      <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow z-50">
-                        <button
-                          className="block w-full text-left px-3 py-2 text-xs hover:bg-gray-100"
-                          onClick={() => {
-                            handelFilterOption(null);
-                            setOpenFilter(null);
-                            setPage(1);
-                          }}
-                        >
-                          All
-                        </button>
-
-                        {c.filterOption.map((option) => (
+                      {/* Filter Popover */}
+                      {c.filterOption && (
+                        <div className="relative">
                           <button
-                            key={option.value}
-                            className="block w-full text-left px-3 py-2 text-xs hover:bg-gray-100"
-                            onClick={() => {
-                              handelFilterOption({
-                                key: c.key as string,
-                                value: option.value,
-                              });
-                              setOpenFilter(null);
-                              setPage(1);
-                            }}
+                            onClick={() => setOpenFilter(openFilter === c.key ? null : (c.key as string))}
+                            className={`p-1 rounded-md transition-colors ${openFilter === c.key ? "bg-indigo-100 text-indigo-600" : "hover:bg-slate-200"}`}
                           >
-                            {option.label}
+                            <FiFilter size={12} />
                           </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </th>
-            ))}
-          </tr>
-        </thead>
 
-        <tbody>
-          {loading ? (
-            <tr>
-              <td colSpan={columns.length} className="py-6 text-center">
-                Loading...
-              </td>
-            </tr>
-          ) : data.length === 0 ? (
-            <tr>
-              <td
-                colSpan={columns.length}
-                className="py-6 text-center text-gray-500"
-              >
-                No records found
-              </td>
-            </tr>
-          ) : (
-            data.map((row, i) => (
-              <tr key={i} className="border-t">
-                {columns.map((c, j) => (
-                  <td key={j} className="px-4 py-3">
-                    {c.render
-                      ? c.render(row, refresh) // 🔥 pass refresh here
-                      : String((row as any)[c.key as string] ?? "")}
-                  </td>
+                          <AnimatePresence>
+                            {openFilter === c.key && (
+                              <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                className="absolute left-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-2 shadow-indigo-900/5"
+                              >
+                                <button
+                                  className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-50 text-slate-600"
+                                  onClick={() => {
+                                    handelFilterOption(null);
+                                    setOpenFilter(null);
+                                    setPage(1);
+                                  }}
+                                >
+                                  Show All
+                                </button>
+                                {c.filterOption.map((option) => (
+                                  <button
+                                    key={option.value}
+                                    className="w-full text-left px-4 py-2 text-xs font-medium hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition-colors"
+                                    onClick={() => {
+                                      handelFilterOption({ key: c.key as string, value: option.value });
+                                      setOpenFilter(null);
+                                      setPage(1);
+                                    }}
+                                  >
+                                    {option.label}
+                                  </button>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )}
+                    </div>
+                  </th>
                 ))}
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            </thead>
 
-      {/* Pagination */}
-      <div className="flex justify-between items-center">
-        <span className="text-sm text-gray-600">
-          Page {page} of {meta.totalPages}
-        </span>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={columns.length} className="px-6 py-4">
+                      <div className="h-4 bg-slate-100 rounded w-full"></div>
+                    </td>
+                  </tr>
+                ))
+              ) : data.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <FiBox size={40} className="text-slate-200" />
+                      <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No records found</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                data.map((row, i) => (
+                  <tr key={i} className="hover:bg-slate-50/80 transition-colors group">
+                    {columns.map((c, j) => (
+                      <td key={j} className="px-6 py-4 text-sm text-slate-600 font-medium">
+                        {c.render
+                          ? c.render(row, refresh)
+                          : String((row as any)[c.key as string] ?? "—")}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-        <div className="space-x-2">
+      {/* Pagination Container */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 px-2">
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+          Showing Page <span className="text-slate-900">{page}</span> of <span className="text-slate-900">{meta.totalPages || 1}</span>
+        </p>
+
+        <div className="flex items-center gap-2">
           <button
             disabled={page === 1}
             onClick={() => setPage(page - 1)}
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest bg-white border border-slate-200 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 transition-all text-slate-600 shadow-sm"
           >
-            Prev
+            <FiChevronLeft /> Prev
           </button>
 
           <button
-            disabled={page === meta.totalPages}
+            disabled={page === meta.totalPages || meta.totalPages === 0}
             onClick={() => setPage(page + 1)}
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest bg-white border border-slate-200 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 transition-all text-slate-600 shadow-sm"
           >
-            Next
+            Next <FiChevronRight />
           </button>
         </div>
       </div>
     </div>
   );
 }
-
-/* ================= EXPORT ================= */
 
 const DataTable = forwardRef(DataTableInner) as <T>(
   props: Props<T> & { ref?: React.Ref<DataTableRef> }

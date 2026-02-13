@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import apiClient from '@/lib/axios';
-import { FiArrowLeft } from 'react-icons/fi';
+import { FiChevronLeft, FiFolder, FiSave, FiLoader } from 'react-icons/fi';
+import { motion } from 'framer-motion';
 
 type EditCategoryFormInputs = {
   name: string;
-  // Add any other fields for category editing
 };
 
 type CategoryData = {
@@ -35,16 +35,13 @@ export default function EditCategoryPage() {
           name: category.name,
         });
       } catch (err: any) {
-        console.error('Error fetching category:', err);
         setError(err.response?.data?.error || 'Failed to fetch category details.');
       } finally {
         setLoading(false);
       }
     };
 
-    if (id) {
-      fetchCategory();
-    }
+    if (id) fetchCategory();
   }, [id, reset]);
 
   const onSubmit = async (data: EditCategoryFormInputs) => {
@@ -52,10 +49,10 @@ export default function EditCategoryPage() {
     setError(null);
     setSuccess(null);
     try {
-      const response = await apiClient.put(`/admin/categories/${id}`, data); // Assuming PUT endpoint for update
+      const response = await apiClient.put(`/admin/categories/${id}`, data);
       if (response.data.success) {
         setSuccess('Category updated successfully!');
-        router.push('/admin/categories'); // Redirect back to category list
+        setTimeout(() => router.push('/admin/categories'), 1000);
       } else {
         setError(response.data.error || 'Failed to update category.');
       }
@@ -67,49 +64,88 @@ export default function EditCategoryPage() {
   };
 
   if (loading) {
-    return <div className="container mx-auto px-4 py-8">Loading category details...</div>;
-  }
-
-  if (error) {
-    return <div className="container mx-auto px-4 py-8 text-red-600">Error: {error}</div>;
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <FiLoader className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto px-4 py-4">
+    <div className="mx-auto max-w-2xl">
+      {/* Header Section */}
+      <div className="mb-8">
         <button
-              onClick={() => router.back()}
-              className="mb-2 inline-flex items-center gap-2 text-lg font-medium text-gray-600 hover:text-blue-600 transition"
-            >
-              <FiArrowLeft className="text-lg" />
-              Back
-            </button>
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Edit Category</h1>
-      <div className="bg-white p-6 rounded-lg shadow-md max-w-lg mx-auto">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Category Name</label>
-            <input
-              type="text"
-              id="name"
-              {...register('name', { required: 'Category name is required' })}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
-            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
+          onClick={() => router.back()}
+          className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-indigo-600"
+        >
+          <FiChevronLeft /> Back to Categories
+        </button>
+        <h1 className="text-2xl font-black tracking-tight text-slate-900">Edit Category</h1>
+        <p className="text-sm text-slate-500">Modify the category details and properties.</p>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
+          <div className="space-y-2">
+            <label className="ml-1 text-xs font-bold uppercase tracking-widest text-slate-400">
+              Category Name
+            </label>
+            <div className="group relative">
+              <FiFolder className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
+              <input
+                type="text"
+                {...register('name', { required: 'Category name is required' })}
+                placeholder="e.g. Electronics"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+              />
+            </div>
+            {errors.name && (
+              <p className="ml-1 text-[10px] font-bold uppercase text-rose-500">
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
-          {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-          {success && <p className="text-sm text-green-600 text-center">{success}</p>}
+          {/* Alert Messaging */}
+          {(error || success) && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className={`rounded-xl border p-4 text-center text-xs font-bold uppercase tracking-widest ${
+                error 
+                  ? 'border-rose-100 bg-rose-50 text-rose-600' 
+                  : 'border-emerald-100 bg-emerald-50 text-emerald-600'
+              }`}
+            >
+              {error || success}
+            </motion.div>
+          )}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            {submitting ? 'Updating...' : 'Update Category'}
-          </button>
+          {/* Action Button */}
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 px-4 text-sm font-bold uppercase tracking-widest text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50"
+            >
+              {submitting ? (
+                <>
+                  <FiLoader className="animate-spin" /> Updating...
+                </>
+              ) : (
+                <>
+                  <FiSave /> Save Changes
+                </>
+              )}
+            </button>
+          </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }
-

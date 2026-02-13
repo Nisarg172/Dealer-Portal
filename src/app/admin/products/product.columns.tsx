@@ -3,7 +3,13 @@
 import Link from 'next/link';
 import { Column } from '@/components/common/Table/DataTable';
 import { FilterOption } from '@/components/common/Table/types';
+import { ReactNode } from 'react';
+import { FiEdit2, FiTrash2 } from 'react-icons/fi'; // Added icons
+
 export type Product = {
+  category_name: ReactNode;
+  image_url: string;
+  discounted_price: number;
   id: string;
   name: string;
   base_price: number;
@@ -13,7 +19,6 @@ export type Product = {
     name: string;
   } | null;
 };
-
 
 export const productColumns = (
   onDelete: (id: string) => void,
@@ -29,7 +34,6 @@ export const productColumns = (
     key: `categories.id` as keyof Product,
     render: (product) => product.categories?.name ?? '—',
     filterOption: categories,
-    
   },
   {
     label: 'Base Price',
@@ -54,19 +58,27 @@ export const productColumns = (
   {
     label: 'Actions',
     render: (product) => (
-      <div className="space-x-3">
+      <div className="flex items-center gap-4">
+        {/* Edit Icon Button */}
         <Link
           href={`/admin/products/${product.id}/edit`}
-          className="text-blue-600 hover:underline"
+          className="text-blue-500 hover:text-blue-700 transition-colors"
+          title="Edit"
         >
-          Edit
+          <FiEdit2 size={18} />
         </Link>
 
+        {/* Delete Icon Button */}
         <button
-          onClick={() => onDelete(product.id)}
-          className="text-red-600 hover:underline"
+          onClick={() => {
+            if (confirm(`Are you sure you want to delete ${product.name}?`)) {
+              onDelete(product.id);
+            }
+          }}
+          className="text-red-500 hover:text-red-700 transition-colors"
+          title="Delete"
         >
-          Delete
+          <FiTrash2 size={18} />
         </button>
       </div>
     ),

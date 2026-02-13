@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import apiClient from '@/lib/axios';
-import { FiArrowLeft } from 'react-icons/fi';
+import { 
+  FiChevronLeft, FiBox, FiTag, FiDollarSign, 
+  FiInfo, FiImage, FiFileText, FiGlobe, 
+  FiActivity, FiSave, FiLoader 
+} from 'react-icons/fi';
+import { motion } from 'framer-motion';
 
 type EditProductFormInputs = {
   name: string;
@@ -42,6 +47,7 @@ export default function EditProductPage() {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<EditProductFormInputs>();
 
@@ -51,7 +57,17 @@ export default function EditProductPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
 
-  /* ---------------- Fetch Product & Categories ---------------- */
+  // Watch for image changes for preview
+  const product_image = watch('product_image');
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (product_image && product_image.length > 0) {
+      const file = product_image[0];
+      setPreview(URL.createObjectURL(file));
+    }
+  }, [product_image]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -61,7 +77,6 @@ export default function EditProductPage() {
         ]);
 
         setCategories(catRes.data.data);
-
         const product: ProductData = productRes.data.product;
 
         reset({
@@ -85,186 +100,205 @@ export default function EditProductPage() {
     if (id) fetchData();
   }, [id, reset]);
 
-  /* ---------------- Submit ---------------- */
-const onSubmit = async (data: EditProductFormInputs) => {
-  setSubmitting(true);
-  setError(null);
+  const onSubmit = async (data: EditProductFormInputs) => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append('name', data.name);
+      formData.append('category_id', data.category_id);
+      formData.append('base_price', data.base_price.toString());
+      formData.append('description', data.description);
+      formData.append('status', data.status);
+      if (data.datasheet_url) formData.append('datasheet_url', data.datasheet_url);
+      if (data.product_url) formData.append('product_url', data.product_url);
+      if (data.product_image && data.product_image.length > 0) {
+        Array.from(data.product_image).forEach((file) => formData.append('product_image', file));
+      }
 
-  try {
-    const formData = new FormData();
-    formData.append('name', data.name);
-    formData.append('category_id', data.category_id);
-    formData.append('base_price', data.base_price.toString());
-    formData.append('description', data.description);
-    formData.append('status', data.status);
-
-    if (data.datasheet_url) {
-      formData.append('datasheet_url', data.datasheet_url);
-    }
-
-    if (data.product_url) {
-      formData.append('product_url', data.product_url);
-    }
-
-    if (data.product_image && data.product_image.length > 0) {
-      Array.from(data.product_image).forEach((file) => {
-        formData.append('product_image', file);
+      await apiClient.put(`/admin/products/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
+      router.push('/admin/products');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Update failed');
+    } finally {
+      setSubmitting(false);
     }
+  };
 
-    await apiClient.put(`/admin/products/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-
-    router.push('/admin/products');
-  } catch (err: any) {
-    setError(err.response?.data?.error || 'Update failed');
-  } finally {
-    setSubmitting(false);
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <FiLoader className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
   }
-};
 
-
-
-  if (loading)
-    return <div className="p-8">Loading product...</div>;
-
-  if (error)
-    return <div className="p-8 text-red-600">{error}</div>;
-
-  /* ---------------- UI ---------------- */
   return (
-    <div className="container mx-auto px-4 py-4">
-      <button
-        onClick={() => router.back()}
-        className="mb-2 inline-flex items-center gap-2 text-lg font-medium text-gray-600 hover:text-blue-600 transition"
-      >
-        <FiArrowLeft className="text-lg" />
-        Back
-      </button>
-    
-      <h1 className="text-3xl font-bold mb-6">Edit Product</h1>
+    <div className="mx-auto max-w-5xl">
+      {/* Header */}
+      <div className="mb-8">
+        <button
+          onClick={() => router.back()}
+          className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-indigo-600"
+        >
+          <FiChevronLeft /> Back to Products
+        </button>
+        <h1 className="text-2xl font-black tracking-tight text-slate-900">Edit Product</h1>
+        <p className="text-sm text-slate-500">Update pricing, availability, and marketing details.</p>
+      </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md max-w-xl mx-auto">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column - Main Details */}
+        <div className="lg:col-span-2 space-y-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-6"
+          >
+            {/* Product Name */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-slate-400">Product Name</label>
+              <div className="relative group">
+                <FiBox className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500" />
+                <input
+                  {...register('name', { required: true })}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                />
+              </div>
+            </div>
 
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium">Product Name</label>
-            <input
-              {...register('name', { required: true })}
-              className="mt-1 w-full border rounded px-3 py-2"
-            />
-          </div>
+            {/* Description */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-slate-400">Description</label>
+              <div className="relative group">
+                <FiInfo className="absolute left-3 top-4 text-slate-400 group-focus-within:text-indigo-500" />
+                <textarea
+                  rows={4}
+                  {...register('description')}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                />
+              </div>
+            </div>
 
-          {/* Category */}
-          <div>
-            <label className="block text-sm font-medium">Category</label>
-            <select
-              {...register('category_id', { required: true })}
-              className="mt-1 w-full border rounded px-3 py-2"
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Category */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-400">Category</label>
+                <div className="relative">
+                  <FiTag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <select
+                    {...register('category_id', { required: true })}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-indigo-500 transition-all appearance-none"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-          {/* Base Price */}
-          <div>
-            <label className="block text-sm font-medium">Base Price</label>
-            <input
-              type="number"
-              step="0.01"
-              {...register('base_price', { valueAsNumber: true })}
-              className="mt-1 w-full border rounded px-3 py-2"
-            />
-          </div>
+              {/* Price */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-400">Base Price (INR)</label>
+                <div className="relative">
+                  <FiDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="number" step="0.01"
+                    {...register('base_price', { valueAsNumber: true })}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-indigo-500 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+          </motion.div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium">Description</label>
-            <textarea
-              rows={4}
-              {...register('description')}
-              className="mt-1 w-full border rounded px-3 py-2"
-            />
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-6"
+          >
+             <h2 className="text-sm font-bold text-slate-800">External Resources</h2>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Datasheet Link</label>
+                  <div className="relative group">
+                    <FiFileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input {...register('datasheet_url')} className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-xs" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Product Web URL</label>
+                  <div className="relative group">
+                    <FiGlobe className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input {...register('product_url')} className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-xs" />
+                  </div>
+                </div>
+             </div>
+          </motion.div>
+        </div>
 
-          {/* Current Image */}
-          {currentImage && (
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Current Image
-              </label>
-              <img
-                src={currentImage}
-                alt="Product"
-                className="h-32 rounded border"
+        {/* Right Column - Media & Status */}
+        <div className="space-y-6">
+          {/* Status Card */}
+          <motion.div 
+            initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <label className="mb-3 block text-xs font-bold uppercase tracking-widest text-slate-400">Availability</label>
+            <div className="relative">
+              <FiActivity className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <select
+                {...register('status')}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm font-semibold outline-none focus:border-indigo-500 appearance-none"
+              >
+                <option value="active" className="text-emerald-600">Active</option>
+                <option value="inactive" className="text-slate-400">Inactive</option>
+              </select>
+            </div>
+          </motion.div>
+
+          {/* Media Card */}
+          <motion.div 
+            initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4"
+          >
+            <label className="text-xs font-bold uppercase tracking-widest text-slate-400">Product Media</label>
+            
+            <div className="relative aspect-square overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
+              {(preview || currentImage) ? (
+                <img src={preview || currentImage!} alt="Preview" className="h-full w-full object-cover" />
+              ) : (
+                <FiImage className="text-slate-300 h-10 w-10" />
+              )}
+              <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                <p className="text-white text-xs font-bold">Change Image</p>
+              </div>
+              <input 
+                type="file" accept="image/*" {...register('product_image')} 
+                className="absolute inset-0 cursor-pointer opacity-0" 
               />
             </div>
-          )}
+            <p className="text-[10px] text-center text-slate-400">Recommended: 800x800px (PNG/JPG)</p>
+          </motion.div>
 
-          {/* Image Upload */}
-          <div>
-            <label className="block text-sm font-medium">
-              Replace Image
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              {...register('product_image')}
-            />
-          </div>
-
-          {/* Datasheet URL */}
-          <div>
-            <label className="block text-sm font-medium">
-              Datasheet URL
-            </label>
-            <input
-              type="url"
-              {...register('datasheet_url')}
-              className="mt-1 w-full border rounded px-3 py-2"
-            />
-          </div>
-
-          {/* Product URL */}
-          <div>
-            <label className="block text-sm font-medium">
-              Product Website URL
-            </label>
-            <input
-              type="url"
-              {...register('product_url')}
-              className="mt-1 w-full border rounded px-3 py-2"
-            />
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className="block text-sm font-medium">Status</label>
-            <select
-              {...register('status')}
-              className="mt-1 w-full border rounded px-3 py-2"
+          {/* Action Buttons */}
+          <div className="space-y-3 pt-4">
+            <button
+              type="submit" disabled={submitting}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-bold uppercase tracking-widest text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50"
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+              {submitting ? <FiLoader className="animate-spin" /> : <FiSave />}
+              Save Changes
+            </button>
+            
+            {error && (
+              <p className="text-center text-[10px] font-bold uppercase tracking-tighter text-rose-500">
+                {error}
+              </p>
+            )}
           </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {submitting ? 'Updating...' : 'Update Product'}
-          </button>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }
-

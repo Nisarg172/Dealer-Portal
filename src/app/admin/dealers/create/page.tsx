@@ -4,6 +4,11 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import apiClient from '@/lib/axios';
 import { useState } from 'react';
+import { 
+  FiUser, FiMail, FiPhone, FiBriefcase, 
+  FiMapPin, FiLock, FiPlusCircle, FiLoader, FiChevronLeft 
+} from 'react-icons/fi';
+import Link from 'next/link';
 
 type CreateDealerFormInputs = {
   name: string;
@@ -29,8 +34,8 @@ export default function CreateDealerPage() {
       const response = await apiClient.post('/admin/dealers', data);
       if (response.data.success) {
         setSuccess('Dealer created successfully!');
-        reset(); // Clear form after successful submission
-        router.push('/admin/dealers'); // Redirect back to dealer list
+        reset();
+        router.push('/admin/dealers');
       } else {
         setError(response.data.error || 'Failed to create dealer.');
       }
@@ -42,85 +47,148 @@ export default function CreateDealerPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Create New Dealer</h1>
-      <div className="bg-white p-6 rounded-lg shadow-md max-w-lg mx-auto">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Dealer Name</label>
-            <input
-              type="text"
-              id="name"
-              {...register('name', { required: 'Dealer name is required' })}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
-            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
-          </div>
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              id="email"
-              {...register('email', { required: 'Email is required' })}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
-            {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
-          </div>
-
-          <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone (Optional)</label>
-            <input
-              type="text"
-              id="phone"
-              {...register('phone')}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="company_name" className="block text-sm font-medium text-gray-700">Company Name</label>
-            <input
-              type="text"
-              id="company_name"
-              {...register('company_name', { required: 'Company name is required' })}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
-            {errors.company_name && <p className="mt-1 text-sm text-red-600">{errors.company_name.message}</p>}
-          </div>
-
-          <div>
-            <label htmlFor="address" className="block text-sm font-medium text-gray-700">Address</label>
-            <textarea
-              id="address"
-              {...register('address', { required: 'Address is required' })}
-              rows={3}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            ></textarea>
-            {errors.address && <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>}
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-            <input
-              type="password"
-              id="password"
-              {...register('password', { required: 'Password is required', minLength: { value: 6, message: 'Password must be at least 6 characters' } })}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
-            {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
-          </div>
-
-          {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-          {success && <p className="text-sm text-green-600 text-center">{success}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+    <div className="max-w-4xl mx-auto">
+      {/* Header Section */}
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <Link 
+            href="/admin/dealers" 
+            className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors mb-2"
           >
-            {loading ? 'Creating...' : 'Create Dealer'}
-          </button>
+            <FiChevronLeft /> Back to Dealers
+          </Link>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Create New Dealer</h1>
+          <p className="text-slate-500 text-sm">Register a new partner account to the system.</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Dealer Name */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">Dealer Name</label>
+              <div className="relative group">
+                <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <input
+                  type="text"
+                  {...register('name', { required: 'Dealer name is required' })}
+                  placeholder="John Doe"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm"
+                />
+              </div>
+              {errors.name && <p className="text-[10px] font-bold text-rose-500 ml-1 uppercase">{errors.name.message}</p>}
+            </div>
+
+            {/* Email Address */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">Email Address</label>
+              <div className="relative group">
+                <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <input
+                  type="email"
+                  {...register('email', { required: 'Email is required' })}
+                  placeholder="john@example.com"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm"
+                />
+              </div>
+              {errors.email && <p className="text-[10px] font-bold text-rose-500 ml-1 uppercase">{errors.email.message}</p>}
+            </div>
+
+            {/* Phone Number */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">Phone (Optional)</label>
+              <div className="relative group">
+                <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <input
+                  type="text"
+                  {...register('phone')}
+                  placeholder="+1 (555) 000-0000"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Company Name */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">Company Name</label>
+              <div className="relative group">
+                <FiBriefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <input
+                  type="text"
+                  {...register('company_name', { required: 'Company name is required' })}
+                  placeholder="Acme Corp"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm"
+                />
+              </div>
+              {errors.company_name && <p className="text-[10px] font-bold text-rose-500 ml-1 uppercase">{errors.company_name.message}</p>}
+            </div>
+
+            {/* Password */}
+            <div className="md:col-span-2 space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">Account Password</label>
+              <div className="relative group">
+                <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <input
+                  type="password"
+                  {...register('password', { 
+                    required: 'Password is required', 
+                    minLength: { value: 6, message: 'Minimum 6 characters' } 
+                  })}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm"
+                />
+              </div>
+              {errors.password && <p className="text-[10px] font-bold text-rose-500 ml-1 uppercase">{errors.password.message}</p>}
+            </div>
+
+            {/* Address */}
+            <div className="md:col-span-2 space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">Physical Address</label>
+              <div className="relative group">
+                <FiMapPin className="absolute left-3 top-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <textarea
+                  {...register('address', { required: 'Address is required' })}
+                  rows={3}
+                  placeholder="Enter full business address..."
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm resize-none"
+                ></textarea>
+              </div>
+              {errors.address && <p className="text-[10px] font-bold text-rose-500 ml-1 uppercase">{errors.address.message}</p>}
+            </div>
+          </div>
+
+          {/* Alert Messages */}
+          {(error || success) && (
+            <div className={`p-4 rounded-xl text-center text-xs font-bold uppercase tracking-widest ${
+              error ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+            }`}>
+              {error || success}
+            </div>
+          )}
+
+          {/* Action Button */}
+          <div className="pt-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
+            >
+              {loading ? (
+                <>
+                  <FiLoader className="animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                <>
+                  <FiPlusCircle />
+                  Create Dealer Account
+                </>
+              )}
+            </button>
+          </div>
         </form>
       </div>
     </div>
