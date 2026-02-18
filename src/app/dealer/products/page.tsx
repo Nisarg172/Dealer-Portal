@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FiSearch, FiEye, FiArrowRight, FiShoppingCart, FiFilter, FiX, FiChevronDown } from "react-icons/fi"; // Added FiChevronDown
 import { Category } from "@/app/admin/categories/category.columns";
 import { Product } from "@/app/admin/products/product.columns";
+import { useRouter } from "next/navigation";
 
 export default function DealerProductListingPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -20,6 +21,7 @@ export default function DealerProductListingPage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false); // New state for custom dropdown
   const searchRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   // Outside click logic to close search and dropdown
   useEffect(() => {
@@ -190,10 +192,10 @@ export default function DealerProductListingPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-md font-black">₹{hasDiscount ? product.discounted_price.toLocaleString() : product.base_price.toLocaleString()}</span>
                       <div className="flex gap-2">
-                        <button className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm flex items-center justify-center">
+                        {/* <button className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm flex items-center justify-center">
                           <FiShoppingCart size={14} />
-                        </button>
-                        <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center border border-transparent group-hover:border-slate-100 transition-all">
+                        </button> */}
+                        <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center border border-transparent group-hover:border-slate-100 cursor-pointer transition-all" onClick={()=>{router.push(`product/${product.id}`)}}>
                           <FiEye size={14} />
                         </div>
                       </div>
