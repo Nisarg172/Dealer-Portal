@@ -103,60 +103,11 @@ export default function DealerDashboardPage() {
           </div>
         </div>
 
-        {/* Right Column: Recent Activity Feed */}
-        <div className="space-y-6">
-          <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-            <FiClock className="text-indigo-600" /> Recent Activity
-          </h2>
-          <div className="bg-white border border-slate-100 rounded-[2.5rem] p-6 shadow-sm overflow-hidden">
-            <div className="space-y-6">
-              {recentOrders.map((order, i) => (
-                <div key={i} className="flex items-start justify-between border-b border-slate-50 pb-4 last:border-0 last:pb-0">
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold text-slate-900">{order.product}</p>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium">
-                      <span>{order.id}</span>
-                      <span>•</span>
-                      <span>{order.date}</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-black text-slate-900">{order.amount}</p>
-                    <span className={`text-[10px] font-bold uppercase ${
-                      order.status === 'Shipped' ? 'text-blue-500' : 
-                      order.status === 'Processing' ? 'text-amber-500' : 'text-emerald-500'
-                    }`}>
-                      {order.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <Link href="/dealer/orders" className="block w-full text-center mt-6 py-3 bg-slate-50 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">
-              View All Orders
-            </Link>
-          </div>
-        </div>
+     
 
       </div>
 
-      {/* --- FULL WIDTH PROMO SECTION --- */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        whileInView={{ opacity: 1, scale: 1 }}
-        className="bg-gradient-to-r from-indigo-700 to-blue-600 rounded-[3rem] p-10 text-white flex flex-col md:flex-row items-center justify-between relative overflow-hidden"
-      >
-        <div className="relative z-10 space-y-4">
-          <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase">Limited Time</span>
-          <h2 className="text-3xl font-black">Stock Up Sale: 15% Extra Margin</h2>
-          <p className="text-indigo-100 max-w-md">Get additional discounts on all Smart Lighting products until Feb 15th. Discount applied at checkout.</p>
-        </div>
-        <button className="relative z-10 mt-6 md:mt-0 bg-white text-indigo-600 px-10 py-4 rounded-2xl font-black hover:bg-indigo-50 transition-all shadow-xl shadow-indigo-900/20">
-          Shop Offers Now
-        </button>
-        {/* Abstract circles for UI flair */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[100px] rounded-full -mr-20 -mt-20" />
-      </motion.div>
+     
     </div>
   );
 }

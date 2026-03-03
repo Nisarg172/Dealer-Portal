@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     });
 
     console.log("==============>",identifier,password)
-    console.log("===========>",authData, authError)
+    console.log("===========>",authData, authError?.message)
 
     if (authError || !authData.user) {
       console.error('Supabase sign-in error:', authError);
