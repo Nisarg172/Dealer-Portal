@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 
 type CreateProductFormInputs = {
   name: string;
@@ -237,7 +238,7 @@ export default function CreateProductPage() {
             
             <div className="relative aspect-square overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center transition-colors hover:bg-slate-100 group">
               {preview ? (
-                <img src={preview} alt="Preview" className="h-full w-full object-cover" />
+                <Image quality={70} src={preview} alt="Preview" className="h-full w-full object-cover" />
               ) : (
                 <div className="text-center">
                   <FiImage className="mx-auto text-slate-300 h-10 w-10 mb-2 group-hover:text-indigo-400 transition-colors" />

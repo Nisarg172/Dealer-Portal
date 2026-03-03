@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import apiClient from "@/lib/axios";
 import { FiArrowLeft } from "react-icons/fi";
+import Image from "next/image";
 
 type ProductDetails = {
   id: string;
@@ -167,7 +168,8 @@ export default function DealerProductDetailPage() {
         {/* Image */}
         <div className="lg:w-1/2">
           {product.images_urls?.length ? (
-            <img
+            <Image
+            quality={70}
               src={product.images_urls[0]}
               alt={product.name}
               className="w-full h-96 object-contain"

@@ -10,6 +10,7 @@ import {
   FiActivity, FiSave, FiLoader 
 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 type EditProductFormInputs = {
   name: string;
@@ -266,7 +267,8 @@ export default function EditProductPage() {
             
             <div className="relative aspect-square overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
               {(preview || currentImage) ? (
-                <img src={preview || currentImage!} alt="Preview" className="h-full w-full object-cover" />
+
+                <Image src={preview || currentImage!} alt="Preview" className="h-full w-full object-cover" quality={70} />
               ) : (
                 <FiImage className="text-slate-300 h-10 w-10" />
               )}
