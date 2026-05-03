@@ -76,7 +76,7 @@ export default function DealerProductDetailPage() {
     if (productId) fetchData();
   }, [productId]);
 
-  // Add to cart
+  // Add to Order
   const handleAddToCart = async () => {
     if (!product) return;
 
@@ -94,7 +94,7 @@ export default function DealerProductDetailPage() {
 
       setMessage("Added to cart successfully");
     } catch (err: any) {
-      setMessage(err.response?.data?.error || "Failed to add to cart");
+      setMessage(err.response?.data?.error || "Failed to Add to Order");
     } finally {
       setAddingToCart(false);
     }
@@ -173,6 +173,8 @@ export default function DealerProductDetailPage() {
               src={product.images_urls[0]}
               alt={product.name}
               className="w-full h-96 object-contain"
+              width={1000}
+              height={1000}
             />
           ) : (
             <div className="w-full h-96 bg-gray-200 flex items-center justify-center">
@@ -277,7 +279,7 @@ export default function DealerProductDetailPage() {
                   disabled={addingToCart}
                   className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
                 >
-                  {addingToCart ? "Adding..." : "Add to Cart"}
+                  {addingToCart ? "Adding..." : "Add to Order"}
                 </button>
 
               </div>

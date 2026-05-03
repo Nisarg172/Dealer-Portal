@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
         id,
         name,
         base_price,
+        purchase_price,
         is_active,
         categories!inner( id, name )
         `,
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
     const name = formData.get('name') as string;
     const category_id = formData.get('category_id') as string;
     const base_price = Number(formData.get('base_price'));
+    const purchase_price = Number(formData.get('purchase_price'));
     const description = formData.get('description') as string;
     const status = formData.get('status') as string;
 
@@ -119,9 +121,23 @@ export async function POST(req: NextRequest) {
 
     const imageFile = formData.get('product_image') as File | null;
 
-    if (!name || !category_id || !base_price || !description || !status) {
+    if (
+      !name ||
+      !category_id ||
+      !description ||
+      !status ||
+      Number.isNaN(base_price) ||
+      Number.isNaN(purchase_price)
+    ) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    if (base_price < 0 || purchase_price < 0) {
+      return NextResponse.json(
+        { error: 'Price values must be zero or greater' },
         { status: 400 }
       );
     }
@@ -162,6 +178,7 @@ export async function POST(req: NextRequest) {
         name,
         category_id,
         base_price,
+        purchase_price,
         description,
         image_urls: imageUrls,
         datasheet_url,
@@ -173,6 +190,7 @@ export async function POST(req: NextRequest) {
         id,
         name,
         base_price,
+        purchase_price,
         is_active,
         image_urls,
         datasheet_url,

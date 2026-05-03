@@ -1,18 +1,20 @@
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-const hostname = new URL(supabaseUrl).hostname
+const hostname = new URL(supabaseUrl).hostname;
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
+        protocol: "https",
         hostname,
-        pathname: '/storage/**',
+        pathname: "/storage/**",
       },
     ],
+    domains: ["hcptziitnasatbhfzaop.supabase.co"],
+    unoptimized: true,
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
