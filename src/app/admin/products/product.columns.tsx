@@ -13,6 +13,7 @@ export type Product = {
   id: string;
   name: string;
   base_price: number;
+  purchase_price?: number | null;
   is_active: boolean;
   categories: {
     id: string;
@@ -40,6 +41,15 @@ export const productColumns = (
     key: 'base_price',
     sortable: true,
     render: (product) => `₹${product.base_price.toFixed(2)}`,
+  },
+  {
+    label: 'Purchase Price',
+    key: 'purchase_price',
+    sortable: true,
+    render: (product) =>
+      typeof product.purchase_price === 'number'
+        ? `₹${product.purchase_price.toFixed(2)}`
+        : '—',
   },
   {
     label: 'Status',

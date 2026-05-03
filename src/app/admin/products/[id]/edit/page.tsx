@@ -16,6 +16,7 @@ type EditProductFormInputs = {
   name: string;
   category_id: string;
   base_price: number;
+  purchase_price: number;
   description: string;
   status: 'active' | 'inactive';
   product_image?: FileList;
@@ -28,6 +29,7 @@ type ProductData = {
   name: string;
   category_id: string;
   base_price: number;
+  purchase_price: number;
   description: string;
   is_active: boolean;
   datasheet_url?: string;
@@ -84,6 +86,7 @@ export default function EditProductPage() {
           name: product.name,
           category_id: product.category_id,
           base_price: product.base_price,
+          purchase_price: product.purchase_price,
           description: product.description,
           status: product.is_active ? 'active' : 'inactive',
           datasheet_url: product.datasheet_url || '',
@@ -109,6 +112,7 @@ export default function EditProductPage() {
       formData.append('name', data.name);
       formData.append('category_id', data.category_id);
       formData.append('base_price', data.base_price.toString());
+      formData.append('purchase_price', data.purchase_price.toString());
       formData.append('description', data.description);
       formData.append('status', data.status);
       if (data.datasheet_url) formData.append('datasheet_url', data.datasheet_url);
@@ -182,7 +186,7 @@ export default function EditProductPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Category */}
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-slate-400">Category</label>
@@ -206,7 +210,20 @@ export default function EditProductPage() {
                   <FiDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="number" step="0.01"
-                    {...register('base_price', { valueAsNumber: true })}
+                    {...register('base_price', { required: true, valueAsNumber: true })}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-indigo-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Purchase Price */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-400">Purchase Price (INR)</label>
+                <div className="relative">
+                  <FiDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="number" step="0.01"
+                    {...register('purchase_price', { required: true, valueAsNumber: true })}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-indigo-500 transition-all"
                   />
                 </div>
@@ -268,7 +285,7 @@ export default function EditProductPage() {
             <div className="relative aspect-square overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
               {(preview || currentImage) ? (
 
-                <Image src={preview || currentImage!} alt="Preview" className="h-full w-full object-cover" quality={70} />
+                <Image src={preview || currentImage!} alt="Preview" className="h-full w-full object-cover" quality={70} width={1000} height={1000}/>
               ) : (
                 <FiImage className="text-slate-300 h-10 w-10" />
               )}

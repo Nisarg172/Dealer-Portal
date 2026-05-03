@@ -17,6 +17,7 @@ type CreateProductFormInputs = {
   name: string;
   category_id: string;
   base_price: number;
+  purchase_price: number;
   description: string;
   status: 'active' | 'inactive';
   product_image: FileList;
@@ -70,6 +71,7 @@ export default function CreateProductPage() {
       formData.append('name', data.name);
       formData.append('category_id', data.category_id);
       formData.append('base_price', data.base_price.toString());
+      formData.append('purchase_price', data.purchase_price.toString());
       formData.append('description', data.description);
       formData.append('status', data.status);
       formData.append('datasheet_url', data.datasheet_url);
@@ -151,7 +153,7 @@ export default function CreateProductPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Category Selection */}
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">Category</label>
@@ -177,6 +179,20 @@ export default function CreateProductPage() {
                   <input
                     type="number" step="0.01"
                     {...register('base_price', { required: true, valueAsNumber: true })}
+                    placeholder="0.00"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                  />
+                </div>
+              </div>
+
+              {/* Purchase Price */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">Purchase Price (INR)</label>
+                <div className="relative group">
+                  <FiDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
+                  <input
+                    type="number" step="0.01"
+                    {...register('purchase_price', { required: true, valueAsNumber: true })}
                     placeholder="0.00"
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
                   />
@@ -238,7 +254,7 @@ export default function CreateProductPage() {
             
             <div className="relative aspect-square overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center transition-colors hover:bg-slate-100 group">
               {preview ? (
-                <Image quality={70} src={preview} alt="Preview" className="h-full w-full object-cover" />
+                <Image quality={70} src={preview} alt="Preview" className="h-full w-full object-cover" width={1000} height={1000} />
               ) : (
                 <div className="text-center">
                   <FiImage className="mx-auto text-slate-300 h-10 w-10 mb-2 group-hover:text-indigo-400 transition-colors" />
