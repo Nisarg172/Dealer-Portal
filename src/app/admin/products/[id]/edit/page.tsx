@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { ClipboardEvent, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import apiClient from '@/lib/axios';
@@ -59,6 +59,7 @@ export default function EditProductPage() {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
+  const [pastedImage, setPastedImage] = useState<File | null>(null);
 
   // Watch for image changes for preview
   const product_image = watch('product_image');
@@ -67,9 +68,48 @@ export default function EditProductPage() {
   useEffect(() => {
     if (product_image && product_image.length > 0) {
       const file = product_image[0];
-      setPreview(URL.createObjectURL(file));
+      const objectUrl = URL.createObjectURL(file);
+      setPreview(objectUrl);
+      setPastedImage(null);
+
+      return () => URL.revokeObjectURL(objectUrl);
     }
   }, [product_image]);
+
+  useEffect(() => {
+    if (!pastedImage) {
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(pastedImage);
+    setPreview(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [pastedImage]);
+
+  const handleImagePaste = (event: ClipboardEvent<HTMLFormElement>) => {
+    const imageItem = Array.from(event.clipboardData.items).find((item) =>
+      item.type.startsWith('image/')
+    );
+
+    if (!imageItem) {
+      return;
+    }
+
+    const imageFile = imageItem.getAsFile();
+    if (!imageFile) {
+      return;
+    }
+
+    event.preventDefault();
+    const extension = imageFile.type.split('/')[1] || 'png';
+    const normalizedImage = new File([imageFile], `pasted-product-image.${extension}`, {
+      type: imageFile.type,
+    });
+
+    setPastedImage(normalizedImage);
+    setError(null);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -117,8 +157,9 @@ export default function EditProductPage() {
       formData.append('status', data.status);
       if (data.datasheet_url) formData.append('datasheet_url', data.datasheet_url);
       if (data.product_url) formData.append('product_url', data.product_url);
-      if (data.product_image && data.product_image.length > 0) {
-        Array.from(data.product_image).forEach((file) => formData.append('product_image', file));
+      const selectedImage = pastedImage || data.product_image?.[0];
+      if (selectedImage) {
+        formData.append('product_image', selectedImage);
       }
 
       await apiClient.put(`/admin/products/${id}`, formData, {
@@ -154,7 +195,7 @@ export default function EditProductPage() {
         <p className="text-sm text-slate-500">Update pricing, availability, and marketing details.</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <form onPaste={handleImagePaste} onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Main Details */}
         <div className="lg:col-span-2 space-y-6">
           <motion.div 
@@ -298,6 +339,7 @@ export default function EditProductPage() {
               />
             </div>
             <p className="text-[10px] text-center text-slate-400">Recommended: 800x800px (PNG/JPG)</p>
+            <p className="text-[10px] text-center text-slate-400">Upload or paste copied image (Ctrl/Cmd + V)</p>
           </motion.div>
 
           {/* Action Buttons */}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { supabase } from '@/lib/supabase';
+import { randomUUID } from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   try {
     const { data: category, error } = await supabase
       .from('categories')
-      .select('id, name')
+      .select('id, name, image_url')
       .eq('id', categoryId)
       .is('deleted_at', null)
       .single();
@@ -68,16 +69,76 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 
   const categoryId = params.id;
-  const { name } = await req.json();
-
-  if (!name) {
-    return NextResponse.json({ error: 'Category name is required.' }, { status: 400 });
-  }
 
   try {
+    const contentType = req.headers.get('content-type') || '';
+    let name = '';
+    let imageFile: File | null = null;
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      name = ((formData.get('name') as string) || '').trim();
+      imageFile = formData.get('category_image') as File | null;
+    } else {
+      const body = await req.json();
+      name = (body?.name || '').trim();
+    }
+
+    if (!name) {
+      return NextResponse.json({ error: 'Category name is required.' }, { status: 400 });
+    }
+
+    const { data: existingCategory, error: existingCategoryError } = await supabase
+      .from('categories')
+      .select('image_url')
+      .eq('id', categoryId)
+      .is('deleted_at', null)
+      .single();
+
+    if (existingCategoryError || !existingCategory) {
+      return NextResponse.json({ error: 'Category not found or database error.' }, { status: 404 });
+    }
+
+    let image_url = existingCategory.image_url;
+
+    if (imageFile && imageFile.size > 0) {
+      if (image_url) {
+        const oldPath = image_url.split('/product-images/')[1];
+        if (oldPath) {
+          await supabase.storage
+            .from('product-images')
+            .remove([oldPath]);
+        }
+      }
+
+      const fileExt = imageFile.name.split('.').pop() || 'jpg';
+      const fileName = `categories/${randomUUID()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, imageFile, {
+          contentType: imageFile.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error('Error uploading category image:', uploadError);
+        return NextResponse.json({ error: 'Image upload failed' }, { status: 500 });
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+
+      image_url = publicUrlData.publicUrl;
+    }
     const { data: updatedCategory, error } = await supabase
       .from('categories')
-      .update({ name, updated_at: new Date().toISOString() })
+      .update({
+        name,
+        image_url,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', categoryId)
       .select()
       .single();
