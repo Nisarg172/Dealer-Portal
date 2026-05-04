@@ -305,7 +305,7 @@ export default function DealerCartPage() {
                   disabled={actionLoading}
                   className="py-4 bg-indigo-600 text-white rounded-xl font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 disabled:opacity-50 transition-all"
                 >
-                  {actionLoading ? "Processing..." : "Confirm & Pay"}
+                  {actionLoading ? "Processing..." : "Confirm"}
                 </button>
               </div>
             </motion.div>

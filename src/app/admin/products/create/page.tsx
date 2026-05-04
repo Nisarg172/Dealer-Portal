@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import apiClient from '@/lib/axios';
-import { useState, useEffect } from 'react';
+import { ClipboardEvent, useState, useEffect } from 'react';
 import { 
   FiChevronLeft, FiBox, FiTag, FiDollarSign, 
   FiInfo, FiImage, FiFileText, FiGlobe, 
@@ -32,22 +32,63 @@ type Category = {
 
 export default function CreateProductPage() {
   const router = useRouter();
-  const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<CreateProductFormInputs>();
+  const { register, handleSubmit, formState: { errors }, reset, watch, clearErrors } = useForm<CreateProductFormInputs>();
 
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [fetchingCategories, setFetchingCategories] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [pastedImage, setPastedImage] = useState<File | null>(null);
 
   // Watch for image changes to generate a preview
   const productImage = watch('product_image');
   useEffect(() => {
     if (productImage && productImage.length > 0) {
       const file = productImage[0];
-      setPreview(URL.createObjectURL(file));
+      const objectUrl = URL.createObjectURL(file);
+      setPreview(objectUrl);
+      setPastedImage(null);
+
+      return () => URL.revokeObjectURL(objectUrl);
     }
   }, [productImage]);
+
+  useEffect(() => {
+    if (!pastedImage) {
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(pastedImage);
+    setPreview(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [pastedImage]);
+
+  const handleImagePaste = (event: ClipboardEvent<HTMLFormElement>) => {
+    const imageItem = Array.from(event.clipboardData.items).find((item) =>
+      item.type.startsWith('image/')
+    );
+
+    if (!imageItem) {
+      return;
+    }
+
+    const imageFile = imageItem.getAsFile();
+    if (!imageFile) {
+      return;
+    }
+
+    event.preventDefault();
+    const extension = imageFile.type.split('/')[1] || 'png';
+    const normalizedImage = new File([imageFile], `pasted-product-image.${extension}`, {
+      type: imageFile.type,
+    });
+
+    setPastedImage(normalizedImage);
+    clearErrors('product_image');
+    setError(null);
+  };
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -76,9 +117,9 @@ export default function CreateProductPage() {
       formData.append('status', data.status);
       formData.append('datasheet_url', data.datasheet_url);
       formData.append('product_url', data.product_url);
-
-      if (data.product_image?.[0]) {
-        formData.append('product_image', data.product_image[0]);
+      const selectedImage = pastedImage || data.product_image?.[0];
+      if (selectedImage) {
+        formData.append('product_image', selectedImage);
       }
 
       const res = await apiClient.post('/admin/products', formData, {
@@ -86,6 +127,8 @@ export default function CreateProductPage() {
       });
 
       if (res.data.success) {
+        setPreview(null);
+        setPastedImage(null);
         reset();
         router.push('/admin/products');
       }
@@ -118,7 +161,7 @@ export default function CreateProductPage() {
         <p className="text-sm text-slate-500">Create a new entry in your product catalog.</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <form onPaste={handleImagePaste} onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Form Area */}
         <div className="lg:col-span-2 space-y-6">
           <motion.div 
@@ -263,10 +306,16 @@ export default function CreateProductPage() {
               )}
               <input 
                 type="file" accept="image/*" 
-                {...register('product_image', { required: 'Product image is required' })} 
+                {...register('product_image', {
+                  validate: (files) =>
+                    (Boolean(pastedImage) || Boolean(files?.length)) || 'Product image is required',
+                })} 
                 className="absolute inset-0 cursor-pointer opacity-0" 
               />
             </div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase text-center tracking-tighter">
+              Upload or paste copied image (Ctrl/Cmd + V)
+            </p>
             {errors.product_image && <p className="text-[10px] font-bold text-rose-500 uppercase text-center">{errors.product_image.message}</p>}
           </motion.div>
 

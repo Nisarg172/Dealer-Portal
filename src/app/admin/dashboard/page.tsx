@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import apiClient from '@/lib/axios';
 import { 
   Users, 
   Package, 
@@ -12,7 +13,6 @@ import {
   Clock,
   ChevronRight,
   AlertTriangle,
-  CheckCircle2,
   Activity,
   DollarSign,
   ShieldCheck,
@@ -20,12 +20,23 @@ import {
 } from 'lucide-react';
 
 /* ================= DUMP DATA ================= */
-const stats = [
-  { label: 'Total Dealers', value: '124', change: '+12%', isPositive: true, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-  { label: 'Total Products', value: '1,420', change: '+5.4%', isPositive: true, icon: Package, color: 'text-purple-600', bg: 'bg-purple-50' },
-  { label: 'Recent Orders', value: '48', change: '-2%', isPositive: false, icon: ShoppingBag, color: 'text-orange-600', bg: 'bg-orange-50' },
-  { label: 'Revenue', value: '$42,500', change: '+18%', isPositive: true, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
-];
+type AdminDashboardStats = {
+  totalDealers: number;
+  totalProducts: number;
+  recentOrders: number;
+  revenue: number;
+};
+type LiveFeedItem = {
+  id: string;
+  user: string;
+  action: string;
+  created_at: string | null;
+};
+
+type AdminDashboardResponse = {
+  stats: AdminDashboardStats;
+  liveFeed: LiveFeedItem[];
+};
 
 const lowStockItems = [
   { id: 1, name: 'Premium Brake Pads', sku: 'BK-9021', stock: 4, unit: 'sets' },
@@ -39,15 +50,93 @@ const systemHealth = [
   { name: 'Storage Service', status: 'Near Capacity', latency: '89ms', color: 'bg-orange-500' },
 ];
 
-const recentActivities = [
-  { id: 1, user: 'Hardik Thummar', action: 'Created new order #ORD-7721', time: '2 mins ago' },
-  { id: 2, user: 'Mihir Patel', action: 'Updated company profile', time: '15 mins ago' },
-  { id: 3, user: 'Sanjay Shah', action: 'Added 5 new products', time: '1 hour ago' },
-  { id: 4, user: 'Vishal Gajera', action: 'Requested deactivation', time: '3 hours ago' },
-];
+const formatRelativeTime = (value: string | null) => {
+  if (!value) return 'Just now';
+
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return 'Just now';
+
+  const diffMs = Date.now() - timestamp;
+  if (diffMs < 60_000) return 'Just now';
+
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'} ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`;
+
+  return new Date(value).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
 
 /* ================= COMPONENT ================= */
 export default function AdminDashboardPage() {
+  const [dashboardData, setDashboardData] = useState<AdminDashboardResponse | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await apiClient.get('/admin/dashboard');
+        setDashboardData(response.data);
+      } catch {
+        setDashboardData(null);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+    fetchDashboardData();
+  }, []);
+
+  const stats = useMemo(
+    () => [
+      {
+        label: 'Total Dealers',
+        value: loadingStats ? '...' : `${(dashboardData?.stats.totalDealers ?? 0).toLocaleString('en-IN')}`,
+        change: 'Live',
+        isPositive: true,
+        icon: Users,
+        color: 'text-blue-600',
+        bg: 'bg-blue-50',
+      },
+      {
+        label: 'Total Products',
+        value: loadingStats ? '...' : `${(dashboardData?.stats.totalProducts ?? 0).toLocaleString('en-IN')}`,
+        change: 'Live',
+        isPositive: true,
+        icon: Package,
+        color: 'text-purple-600',
+        bg: 'bg-purple-50',
+      },
+      {
+        label: 'Recent Orders',
+        value: loadingStats ? '...' : `${(dashboardData?.stats.recentOrders ?? 0).toLocaleString('en-IN')}`,
+        change: 'Last 30 Days',
+        isPositive: true,
+        icon: ShoppingBag,
+        color: 'text-orange-600',
+        bg: 'bg-orange-50',
+      },
+      {
+        label: 'Revenue',
+        value: loadingStats ? '...' : `₹${(dashboardData?.stats.revenue ?? 0).toLocaleString('en-IN')}`,
+        change: 'Live',
+        isPositive: true,
+        icon: TrendingUp,
+        color: 'text-green-600',
+        bg: 'bg-green-50',
+      },
+    ],
+    [dashboardData, loadingStats]
+  );
+
+  const liveFeedItems = dashboardData?.liveFeed ?? [];
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 bg-[#FBFBFD]">
       {/* Header */}
@@ -166,17 +255,31 @@ export default function AdminDashboardPage() {
             <h2 className="text-lg font-bold text-gray-800">Live Feed</h2>
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="p-1">
-                {recentActivities.map((item) => (
-                  <div key={item.id} className="p-4 flex gap-4 hover:bg-gray-50 rounded-xl transition-all cursor-default">
-                    <div className="h-8 w-8 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0">
-                      <Activity size={16} />
+                {loadingStats ? (
+                  [...Array(4)].map((_, index) => (
+                    <div key={index} className="p-4 flex gap-4">
+                      <div className="h-8 w-8 bg-gray-100 rounded-full flex-shrink-0 animate-pulse" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-gray-100 rounded w-5/6 animate-pulse" />
+                        <div className="h-2 bg-gray-100 rounded w-1/3 animate-pulse" />
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs leading-relaxed"><span className="font-bold text-gray-900">{item.user}</span> <span className="text-gray-500">{item.action}</span></p>
-                      <span className="text-[10px] text-gray-400 mt-1 block font-medium">{item.time}</span>
+                  ))
+                ) : liveFeedItems.length > 0 ? (
+                  liveFeedItems.map((item) => (
+                    <div key={item.id} className="p-4 flex gap-4 hover:bg-gray-50 rounded-xl transition-all cursor-default">
+                      <div className="h-8 w-8 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0">
+                        <Activity size={16} />
+                      </div>
+                      <div>
+                        <p className="text-xs leading-relaxed"><span className="font-bold text-gray-900">{item.user}</span> <span className="text-gray-500">{item.action}</span></p>
+                        <span className="text-[10px] text-gray-400 mt-1 block font-medium">{formatRelativeTime(item.created_at)}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="px-4 py-6 text-xs text-gray-500">No recent activity found.</p>
+                )}
               </div>
               <button className="w-full py-4 text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors border-t border-gray-50 uppercase tracking-widest">
                 Full Logs

@@ -17,7 +17,7 @@ import {
 
 const navItems = [
   { label: 'Dashboard', href: '/dealer/dashboard', icon: FiGrid },
-  { label: 'Products', href: '/dealer/products', icon: FiPackage },
+  { label: 'Categories', href: '/dealer/categories', icon: FiPackage },
   { label: 'Orders', href: '/dealer/orders', icon: FiFileText },
   { label: 'Cart', href: '/dealer/cart', icon: FiShoppingCart },
 ];
