@@ -4,13 +4,17 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import apiClient from "@/lib/axios";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { FiSearch, FiEye, FiArrowLeft } from "react-icons/fi";
+import { FiSearch, FiEye, FiArrowLeft, FiMinus, FiPlus } from "react-icons/fi";
 import { Category } from "@/app/admin/categories/category.columns";
 import { Product } from "@/app/admin/products/product.columns";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const PAGE_SIZE = 20;
+type DealerCartItem = {
+  product_id: string;
+  quantity: number;
+};
 
 function DealerProductListingContent() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -20,6 +24,8 @@ function DealerProductListingContent() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
+  const [cartQuantities, setCartQuantities] = useState<Record<string, number>>({});
+  const [updatingCartIds, setUpdatingCartIds] = useState<string[]>([]);
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
 
   const router = useRouter();
@@ -32,6 +38,24 @@ function DealerProductListingContent() {
       setCategories(res.data.categories || []);
     };
     fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const fetchCartQuantities = async () => {
+      try {
+        const res = await apiClient.get("/dealer/cart");
+        const cartItems: DealerCartItem[] = res.data.cartItems || [];
+        const quantityMap = cartItems.reduce<Record<string, number>>((acc, item) => {
+          acc[item.product_id] = item.quantity;
+          return acc;
+        }, {});
+        setCartQuantities(quantityMap);
+      } catch {
+        setCartQuantities({});
+      }
+    };
+
+    fetchCartQuantities();
   }, []);
 
   useEffect(() => {
@@ -86,6 +110,64 @@ function DealerProductListingContent() {
     observer.observe(node);
     return () => observer.disconnect();
   }, [activeCategory, hasMore, loadingMoreProducts, loadingProducts]);
+
+  const setCartItemUpdating = (productId: string, isUpdating: boolean) => {
+    setUpdatingCartIds((prev) => {
+      if (isUpdating) {
+        return prev.includes(productId) ? prev : [...prev, productId];
+      }
+      return prev.filter((id) => id !== productId);
+    });
+  };
+
+  const handleAddToOrder = async (productId: string) => {
+    const nextQuantity = (cartQuantities[productId] || 0) + 1;
+    try {
+      setCartItemUpdating(productId, true);
+      await apiClient.post("/dealer/cart", {
+        productId,
+        quantity: nextQuantity,
+      });
+      setCartQuantities((prev) => ({
+        ...prev,
+        [productId]: nextQuantity,
+      }));
+    } catch {
+      // Keep listing usable if add-to-cart fails.
+    } finally {
+      setCartItemUpdating(productId, false);
+    }
+  };
+
+  const handleUpdateCartQuantity = async (productId: string, nextQuantity: number) => {
+    try {
+      setCartItemUpdating(productId, true);
+
+      if (nextQuantity < 1) {
+        await apiClient.put("/dealer/cart", {
+          updates: [{ productId, remove: true }],
+        });
+        setCartQuantities((prev) => {
+          const updated = { ...prev };
+          delete updated[productId];
+          return updated;
+        });
+        return;
+      }
+
+      await apiClient.put("/dealer/cart", {
+        updates: [{ productId, quantity: nextQuantity }],
+      });
+      setCartQuantities((prev) => ({
+        ...prev,
+        [productId]: nextQuantity,
+      }));
+    } catch {
+      // Keep listing usable if cart update fails.
+    } finally {
+      setCartItemUpdating(productId, false);
+    }
+  };
 
   const activeCategoryName = useMemo(
     () => categories.find((cat) => cat.id === activeCategory)?.name ?? "Products",
@@ -158,6 +240,8 @@ function DealerProductListingContent() {
           <motion.div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {products.map((product) => {
               const hasDiscount = product.discounted_price < product.base_price;
+              const cartQuantity = cartQuantities[product.id] || 0;
+              const isCartUpdating = updatingCartIds.includes(product.id);
               return (
                 <motion.div
                   key={product.id}
@@ -194,6 +278,49 @@ function DealerProductListingContent() {
                       >
                         <FiEye size={14} />
                       </button>
+                    </div>
+                    <div className="mt-3">
+                      {cartQuantity > 0 ? (
+                        <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden w-fit">
+                          <button
+                            onClick={() =>
+                              handleUpdateCartQuantity(product.id, cartQuantity - 1)
+                            }
+                            disabled={isCartUpdating}
+                            className="w-8 h-8 bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center disabled:opacity-50 transition-colors"
+                          >
+                            <FiMinus size={13} />
+                          </button>
+                          <div className="w-10 h-8 flex items-center justify-center text-xs font-bold text-slate-800">
+                            {isCartUpdating ? (
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+                            ) : (
+                              cartQuantity
+                            )}
+                          </div>
+                          <button
+                            onClick={() =>
+                              handleUpdateCartQuantity(product.id, cartQuantity + 1)
+                            }
+                            disabled={isCartUpdating}
+                            className="w-8 h-8 bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center disabled:opacity-50 transition-colors"
+                          >
+                            <FiPlus size={13} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleAddToOrder(product.id)}
+                          disabled={isCartUpdating}
+                          className="w-full rounded-lg bg-indigo-600 text-white text-xs font-bold py-2 hover:bg-indigo-700 disabled:opacity-70 flex items-center justify-center transition-colors"
+                        >
+                          {isCartUpdating ? (
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
+                          ) : (
+                            "Add to Order"
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </motion.div>

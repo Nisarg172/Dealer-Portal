@@ -17,7 +17,8 @@ type CartItem = {
   products: {
     id: string;
     name: string;
-    image_url?: string; // Added image support
+    image_url?: string;
+    image_urls?: string[];
     category_name?: string;
   };
 };
@@ -28,52 +29,61 @@ export default function DealerCartPage() {
   const router = useRouter();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [updatingItemIds, setUpdatingItemIds] = useState<string[]>([]);
+  const [placingOrder, setPlacingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
 
-  const fetchCart = async () => {
+  const fetchCart = async (showPageLoader = false) => {
     try {
-      setLoading(true);
+      if (showPageLoader) {
+        setLoading(true);
+      }
       const res = await apiClient.get("/dealer/cart");
       setCartItems(res.data.cartItems || []);
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to load cart");
     } finally {
-      setLoading(false);
+      if (showPageLoader) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchCart();
+    fetchCart(true);
   }, []);
 
   const updateQuantity = async (productId: string, quantity: number) => {
     if (quantity < 1) return;
     try {
-      setActionLoading(true);
+      setUpdatingItemIds((prev) =>
+        prev.includes(productId) ? prev : [...prev, productId]
+      );
       await apiClient.put("/dealer/cart", {
         updates: [{ productId, quantity }],
       });
-      await fetchCart();
+      await fetchCart(false);
     } catch {
       setError("Failed to update quantity");
     } finally {
-      setActionLoading(false);
+      setUpdatingItemIds((prev) => prev.filter((id) => id !== productId));
     }
   };
 
   const removeItem = async (productId: string) => {
     try {
-      setActionLoading(true);
+      setUpdatingItemIds((prev) =>
+        prev.includes(productId) ? prev : [...prev, productId]
+      );
       await apiClient.put("/dealer/cart", {
         updates: [{ productId, remove: true }],
       });
-      await fetchCart();
+      await fetchCart(false);
     } catch {
       setError("Failed to remove item");
     } finally {
-      setActionLoading(false);
+      setUpdatingItemIds((prev) => prev.filter((id) => id !== productId));
     }
   };
 
@@ -83,10 +93,15 @@ export default function DealerCartPage() {
   );
   const gstAmount = (subTotal * GST_PERCENT) / 100;
   const grandTotal = subTotal + gstAmount;
+  const formatAmount = (value: number) =>
+    value.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
   const placeOrder = async () => {
     try {
-      setActionLoading(true);
+      setPlacingOrder(true);
       await apiClient.post("/dealer/orders", {
         items: cartItems.map((item) => ({
           product_id: item.product_id,
@@ -101,7 +116,7 @@ export default function DealerCartPage() {
     } catch {
       setError("Failed to place order");
     } finally {
-      setActionLoading(false);
+      setPlacingOrder(false);
       setShowSummary(false);
     }
   };
@@ -146,69 +161,92 @@ export default function DealerCartPage() {
           
           {/* --- LEFT: ITEM LIST --- */}
           <div className="lg:col-span-8 space-y-4">
-            <AnimatePresence mode="popLayout">
-              {cartItems.map((item) => (
-                <motion.div
-                  layout
-                  key={item.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="group bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center gap-6"
-                >
-                  {/* Product Image */}
-                  <div className="relative w-24 h-24 bg-slate-50 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-50">
-                    <Image
-                      src={item.products.image_url || "/images/product_dummy.png"}
-                      alt={item.products.name}
-                      fill
-                      className="object-contain p-2"
-                    />
-                  </div>
+            <AnimatePresence>
+              {cartItems.map((item) => {
+                const isItemUpdating = updatingItemIds.includes(item.product_id);
 
-                  {/* Info */}
-                  <div className="flex-grow text-center sm:text-left">
-                    <h3 className="font-bold text-slate-800 text-lg leading-tight mb-1 group-hover:text-indigo-600 transition-colors">
-                      {item.products.name}
-                    </h3>
-                    <p className="text-indigo-500 text-xs font-black uppercase tracking-widest">
-                      Unit Price: ₹{item.current_discounted_price.toLocaleString()}
-                    </p>
-                  </div>
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="group bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center gap-6"
+                  >
+                    {/* Product Image */}
+                    <div className="relative w-24 h-24 bg-slate-50 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-50">
+                      <Image
+                        src={
+                          item.products.image_url ||
+                          item.products.image_urls?.[0] ||
+                          "/images/product_dummy.png"
+                        }
+                        alt={item.products.name}
+                        fill
+                        className="object-contain p-2"
+                      />
+                    </div>
 
-                  {/* Quantity Controls */}
-                  <div className="flex items-center bg-slate-50 rounded-xl p-1 border border-slate-100">
-                    <button
-                      onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
-                      disabled={actionLoading || item.quantity <= 1}
-                      className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-500 disabled:opacity-30 transition-all"
-                    >
-                      <FiMinus size={16} />
-                    </button>
-                    <span className="w-12 text-center font-bold text-slate-800">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
-                      disabled={actionLoading}
-                      className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-500 transition-all"
-                    >
-                      <FiPlus size={16} />
-                    </button>
-                  </div>
+                    {/* Info */}
+                    <div className="flex-grow text-center sm:text-left">
+                      <h3 className="font-bold text-slate-800 text-lg leading-tight mb-1 group-hover:text-indigo-600 transition-colors">
+                        {item.products.name}
+                      </h3>
+                      <p className="text-indigo-500 text-xs font-black uppercase tracking-widest">
+                        Unit Price: ₹{item.current_discounted_price.toLocaleString()}
+                      </p>
+                    </div>
 
-                  {/* Total & Remove */}
-                  <div className="text-right min-w-[120px]">
-                    <p className="font-black text-slate-900 text-lg">
-                      ₹{(item.current_discounted_price * item.quantity).toLocaleString()}
-                    </p>
-                    <button
-                      onClick={() => removeItem(item.product_id)}
-                      className="text-rose-500 hover:text-rose-700 text-sm font-bold flex items-center gap-1 ml-auto mt-1 transition-colors"
-                    >
-                      <FiTrash2 size={14} /> Remove
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
+                    {/* Quantity Controls */}
+                    {isItemUpdating ? (
+                      <div className="flex items-center bg-slate-50 rounded-xl p-1 border border-slate-100 gap-2">
+                        <div className="w-10 h-10 rounded-lg bg-slate-200 animate-pulse" />
+                        <div className="w-10 h-5 rounded bg-slate-200 animate-pulse" />
+                        <div className="w-10 h-10 rounded-lg bg-slate-200 animate-pulse" />
+                      </div>
+                    ) : (
+                      <div className="flex items-center bg-slate-50 rounded-xl p-1 border border-slate-100">
+                        <button
+                          onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
+                          disabled={item.quantity <= 1}
+                          className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-500 disabled:opacity-30 transition-all"
+                        >
+                          <FiMinus size={16} />
+                        </button>
+                        <span className="w-12 text-center font-bold text-slate-800">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                          className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-500 transition-all"
+                        >
+                          <FiPlus size={16} />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Total & Remove */}
+                    <div className="text-right min-w-[120px]">
+                      {isItemUpdating ? (
+                        <>
+                          <div className="h-7 w-24 rounded bg-slate-200 animate-pulse ml-auto" />
+                          <div className="h-4 w-14 rounded bg-slate-200 animate-pulse ml-auto mt-2" />
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-black text-slate-900 text-lg">
+                            ₹{(item.current_discounted_price * item.quantity).toLocaleString()}
+                          </p>
+                          <button
+                            onClick={() => removeItem(item.product_id)}
+                            className="text-rose-500 hover:text-rose-700 text-sm font-bold flex items-center gap-1 ml-auto mt-1 transition-colors"
+                          >
+                            <FiTrash2 size={14} /> Remove
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </div>
 
@@ -223,21 +261,22 @@ export default function DealerCartPage() {
               <div className="space-y-4 relative">
                 <div className="flex justify-between text-slate-400 font-medium">
                   <span>Subtotal</span>
-                  <span className="text-white font-bold">₹{subTotal.toLocaleString()}</span>
+                  <span className="text-white font-bold">₹{formatAmount(subTotal)}</span>
                 </div>
                 <div className="flex justify-between text-slate-400 font-medium">
                   <span>GST (18%)</span>
-                  <span className="text-white font-bold">₹{gstAmount.toLocaleString()}</span>
+                  <span className="text-white font-bold">₹{formatAmount(gstAmount)}</span>
                 </div>
                 <div className="h-px bg-slate-800 my-6"></div>
                 <div className="flex justify-between items-end">
                   <span className="text-slate-400 font-medium">Grand Total</span>
-                  <span className="text-3xl font-black text-indigo-400">₹{grandTotal.toLocaleString()}</span>
+                  <span className="text-3xl font-black text-indigo-400">₹{formatAmount(grandTotal)}</span>
                 </div>
               </div>
 
               <button
                 onClick={() => setShowSummary(true)}
+                disabled={updatingItemIds.length > 0}
                 className="w-full mt-10 bg-indigo-600 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-indigo-900/20 hover:bg-indigo-500 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3"
               >
                 Checkout Now <FiArrowRight />
@@ -285,11 +324,11 @@ export default function DealerCartPage() {
               <div className="bg-slate-50 rounded-2xl p-6 space-y-2 mb-8">
                 <div className="flex justify-between text-slate-500 text-sm">
                   <span>Subtotal + GST</span>
-                  <span>₹{subTotal.toLocaleString()} + ₹{gstAmount.toLocaleString()}</span>
+                  <span>₹{formatAmount(subTotal)} + ₹{formatAmount(gstAmount)}</span>
                 </div>
                 <div className="flex justify-between text-slate-900 font-black text-xl pt-2 border-t border-slate-200">
                   <span>Total Payable</span>
-                  <span className="text-indigo-600">₹{grandTotal.toLocaleString()}</span>
+                  <span className="text-indigo-600">₹{formatAmount(grandTotal)}</span>
                 </div>
               </div>
 
@@ -302,10 +341,10 @@ export default function DealerCartPage() {
                 </button>
                 <button
                   onClick={placeOrder}
-                  disabled={actionLoading}
+                  disabled={placingOrder || updatingItemIds.length > 0}
                   className="py-4 bg-indigo-600 text-white rounded-xl font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 disabled:opacity-50 transition-all"
                 >
-                  {actionLoading ? "Processing..." : "Confirm"}
+                  {placingOrder ? "Processing..." : "Confirm"}
                 </button>
               </div>
             </motion.div>

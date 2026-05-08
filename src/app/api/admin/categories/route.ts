@@ -9,22 +9,25 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
 
     const search = searchParams.get('search') || '';
-    const sortBy = searchParams.get('sortBy') || 'name';
+    const sortBy = searchParams.get('sortBy') || 'main_category';
     const sortOrder = searchParams.get('sortOrder') === 'desc' ? false : true;
     const page = Number(searchParams.get('page') || 1);
     const limit = Number(searchParams.get('limit') || 10);
+    const sortableColumns = new Set(['name', 'main_category', 'created_at', 'updated_at']);
+    const sortColumn = sortableColumns.has(sortBy) ? sortBy : 'main_category';
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
     let query = supabase
       .from('categories')
-      .select('id, name, image_url', { count: 'exact' })
+      .select('id, name, image_url, main_category', { count: 'exact' })
       .is('deleted_at', null)
-      .order(sortBy, { ascending: sortOrder });
+      .order(sortColumn, { ascending: sortOrder })
+      .order('name', { ascending: true });
 
     if (search) {
-      query = query.ilike('name', `%${search}%`);
+      query = query.or(`name.ilike.%${search}%,main_category.ilike.%${search}%`);
     }
 
     const { data, error, count } = await query.range(from, to);
@@ -33,8 +36,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const normalizedData =
+      data?.map((category) => ({
+        ...category,
+        main_category: category.main_category || category.name,
+      })) || [];
+
     return NextResponse.json({
-      data,
+      data: normalizedData,
       meta: {
         page,
         limit,
@@ -60,21 +69,29 @@ export async function POST(req: NextRequest) {
 
   try {
     const contentType = req.headers.get('content-type') || '';
-    let name = '';
+    let subCategoryName = '';
+    let mainCategory = '';
     let imageFile: File | null = null;
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
-      name = ((formData.get('name') as string) || '').trim();
+      subCategoryName = (
+        (formData.get('sub_category') as string) ||
+        (formData.get('name') as string) ||
+        ''
+      ).trim();
+      mainCategory = ((formData.get('main_category') as string) || '').trim();
       imageFile = formData.get('category_image') as File | null;
     } else {
       const body = await req.json();
-      name = (body?.name || '').trim();
+      subCategoryName = (body?.sub_category || body?.name || '').trim();
+      mainCategory = (body?.main_category || '').trim();
     }
 
-    if (!name) {
-      return NextResponse.json({ error: 'Category name is required.' }, { status: 400 });
+    if (!subCategoryName) {
+      return NextResponse.json({ error: 'Sub category name is required.' }, { status: 400 });
     }
+    const normalizedMainCategory = mainCategory || subCategoryName;
 
     let image_url: string | null = null;
 
@@ -103,7 +120,7 @@ export async function POST(req: NextRequest) {
 
     const { data: newCategory, error } = await supabase
       .from('categories')
-      .insert({ name, image_url })
+      .insert({ name: subCategoryName, main_category: normalizedMainCategory, image_url })
       .select();
 
     if (error) {

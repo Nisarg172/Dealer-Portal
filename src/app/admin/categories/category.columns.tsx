@@ -6,6 +6,7 @@ import { FiEdit2, FiTrash2, FiFolder } from 'react-icons/fi';
 
 export type Category = {
   id: string;
+  main_category: string;
   name: string;
 };
 
@@ -13,12 +14,27 @@ export const categoryColumns = (
   onDelete: (id: string) => void
 ): Column<Category>[] => [
   {
-    label: 'Category Name',
-    key: 'name',
+    label: 'Main Category',
+    key: 'main_category',
     sortable: true,
     render: (category) => (
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <FiFolder size={16} />
+        </div>
+        <span className="font-medium text-slate-700 capitalize">
+          {category.main_category}
+        </span>
+      </div>
+    )
+  },
+  {
+    label: 'Sub Category',
+    key: 'name',
+    sortable: true,
+    render: (category) => (
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
           <FiFolder size={16} />
         </div>
         <span className="font-medium text-slate-700 capitalize">

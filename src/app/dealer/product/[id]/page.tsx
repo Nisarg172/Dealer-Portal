@@ -39,9 +39,11 @@ export default function DealerProductDetailPage() {
 
   // Fetch product + cart
 
-  const fetchData = async () => {
+  const fetchData = async (showPageLoader = false) => {
       try {
-        setLoading(true);
+        if (showPageLoader) {
+          setLoading(true);
+        }
         setError(null);
 
         // Fetch product
@@ -61,19 +63,24 @@ export default function DealerProductDetailPage() {
         if (cartItem) {
           setIsInCart(true);
           setCartQuantity(cartItem.quantity);
+        } else {
+          setIsInCart(false);
+          setCartQuantity(0);
         }
       } catch (err: any) {
         setError(
           err.response?.data?.error || "Failed to fetch product details."
         );
       } finally {
-        setLoading(false);
+        if (showPageLoader) {
+          setLoading(false);
+        }
       }
     };
   useEffect(() => {
     
 
-    if (productId) fetchData();
+    if (productId) fetchData(true);
   }, [productId]);
 
   // Add to Order
@@ -102,26 +109,36 @@ export default function DealerProductDetailPage() {
 
   // Update quantity
    const updateQuantity = async (productId: string, quantity: number) => {
-    if (quantity < 1) removeItem(productId);
+    if (quantity < 1) {
+      await removeItem(productId);
+      return;
+    }
     try {
+      setUpdatingCart(true);
       await apiClient.put("/dealer/cart", {
         updates: [{ productId, quantity }],
       });
-      fetchData();
+      setCartQuantity(quantity);
     } catch {
       setError("Failed to update quantity");
+    } finally {
+      setUpdatingCart(false);
     }
   };
 
     const removeItem = async (productId: string) => {
     try {
+      setUpdatingCart(true);
       await apiClient.put("/dealer/cart", {
         updates: [{ productId, remove: true }],
       });
-      fetchData();
+      setIsInCart(false);
+      setCartQuantity(0);
+      setQuantity(1);
     } catch {
       setError("Failed to remove item");
     } finally {
+      setUpdatingCart(false);
     }
   };
 
@@ -129,8 +146,8 @@ export default function DealerProductDetailPage() {
   
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        Loading product details...
+      <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[40vh]">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
       </div>
     );
   }
@@ -277,41 +294,51 @@ export default function DealerProductDetailPage() {
                 <button
                   onClick={handleAddToCart}
                   disabled={addingToCart}
-                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-70 min-w-[120px] flex items-center justify-center"
                 >
-                  {addingToCart ? "Adding..." : "Add to Order"}
+                  {addingToCart ? (
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/60 border-t-white" />
+                  ) : (
+                    "Add to Order"
+                  )}
                 </button>
 
               </div>
 
             ) : (
 
-              <div className="flex items-center border rounded w-fit">
+              <div className="flex flex-col items-start gap-2">
+                <div className="flex items-center border rounded w-fit">
 
-                <button
-                  onClick={() =>
-                    // updateCartQuantity(cartQuantity - 1)
-                    updateQuantity(product.id,cartQuantity - 1)
-                  }
-                  disabled={updatingCart}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300"
-                >
-                  −
-                </button>
+                  <button
+                    onClick={() =>
+                      updateQuantity(product.id,cartQuantity - 1)
+                    }
+                    disabled={updatingCart}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-60"
+                  >
+                    −
+                  </button>
 
-                <div className="px-6 py-2 font-semibold">
-                  {cartQuantity}
+                  <div className="px-6 py-2 font-semibold min-w-[72px] text-center flex items-center justify-center">
+                    {updatingCart ? (
+                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700" />
+                    ) : (
+                      cartQuantity
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      updateQuantity(product.id,cartQuantity + 1)
+                    }
+                    disabled={updatingCart}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-60"
+                  >
+                    +
+                  </button>
+
                 </div>
-
-                <button
-                  onClick={() =>
-                    updateQuantity(product.id,cartQuantity + 1)
-                  }
-                  disabled={updatingCart}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300"
-                >
-                  +
-                </button>
 
               </div>
 

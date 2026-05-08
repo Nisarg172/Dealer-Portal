@@ -50,10 +50,12 @@ export async function GET(req: NextRequest) {
                 product_id,
                 quantity,
                 price_at_addition, 
-                products ( id, name, base_price, category_id: categories (id) )
+                products ( id, name, base_price, image_urls, category_id: categories (id) )
                 `
             )
-            .eq('dealer_id', dealerId);
+            .eq('dealer_id', dealerId)
+            .order('created_at', { ascending: true })
+            .order('id', { ascending: true });
 
         if (error) {
             console.error('Error fetching cart items:', error);
@@ -64,10 +66,18 @@ export async function GET(req: NextRequest) {
             const productId = item.products?.id;
             const basePrice = item.products?.base_price;
             const categoryId = item.products?.category_id?.id; 
+            const imageUrl = item.products?.image_urls?.[0] || null;
 
             if (!productId || basePrice === undefined || !categoryId) {
                 console.warn(`Missing product details for cart item ${item.id}`);
-                return { ...item, current_discounted_price: item.price_at_addition }; 
+                return {
+                    ...item,
+                    products: {
+                        ...(item.products || {}),
+                        image_url: imageUrl,
+                    },
+                    current_discounted_price: item.price_at_addition,
+                }; 
             }
 
             const { data: hiddenProduct } = await supabase.from('dealer_hidden_products').select('product_id').eq('dealer_id', dealerId).eq('product_id', productId).single();
@@ -79,7 +89,14 @@ export async function GET(req: NextRequest) {
 
             const currentDiscountedPrice = await calculateDealerPrice({ id: productId, base_price: basePrice, category_id: categoryId }, { dealerId });
 
-            return { ...item, current_discounted_price: currentDiscountedPrice };
+            return {
+                ...item,
+                products: {
+                    ...(item.products || {}),
+                    image_url: imageUrl,
+                },
+                current_discounted_price: currentDiscountedPrice,
+            };
         }));
 
         const filteredCartItems = updatedCartItems.filter(item => item !== null);

@@ -1,32 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import apiClient from '@/lib/axios';
 import Link from 'next/link';
 
 type OrderItem = {
-  id: string;
+  product_name: string;
   quantity: number;
   price_at_order: number;
-  product: {
-    id: string;
-    name: string;
-  };
 };
 
 type OrderDetail = {
   id: string;
-  order_number: string;
-  status: 'pending' | 'approved' | 'rejected';
+  order_status: 'pending' | 'approved' | 'rejected' | 'shipped' | 'delivered';
   total_amount: number;
   created_at: string;
-  items: OrderItem[];
+  order_items: OrderItem[];
 };
 
 export default function DealerOrderDetailPage() {
-  const { orderId } = useParams();
-  const router = useRouter();
+  const { id: orderId } = useParams() as { id?: string };
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,21 +29,29 @@ export default function DealerOrderDetailPage() {
   /* ----------------------------------------
      FETCH ORDER DETAILS
   ---------------------------------------- */
-  const fetchOrder = async () => {
-    try {
-      setLoading(true);
-      const res = await apiClient.get(`/dealer/orders/${orderId}`);
-      setOrder(res.data.order);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data?.error || 'Failed to load order details');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    if (orderId) fetchOrder();
+    const fetchOrder = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await apiClient.get(`/dealer/orders/${orderId}`);
+        setOrder(res.data.order);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.response?.data?.error || 'Failed to load order details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (orderId) {
+      fetchOrder();
+      return;
+    }
+
+    setError('Invalid order ID');
+    setLoading(false);
   }, [orderId]);
 
   /* ----------------------------------------
@@ -74,10 +76,14 @@ export default function DealerOrderDetailPage() {
      STATUS BADGE
   ---------------------------------------- */
   const statusColor =
-    order.status === 'approved'
+    order.order_status === 'approved'
       ? 'bg-green-100 text-green-700'
-      : order.status === 'rejected'
+      : order.order_status === 'rejected'
       ? 'bg-red-100 text-red-700'
+      : order.order_status === 'delivered'
+      ? 'bg-emerald-100 text-emerald-700'
+      : order.order_status === 'shipped'
+      ? 'bg-blue-100 text-blue-700'
       : 'bg-yellow-100 text-yellow-700';
 
   return (
@@ -85,7 +91,7 @@ export default function DealerOrderDetailPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">
-          Order #{order.order_number}
+          Order #{order.id}
         </h1>
         <Link
           href="/dealer/orders"
@@ -109,7 +115,7 @@ export default function DealerOrderDetailPage() {
           <span
             className={`inline-block px-3 py-1 rounded text-sm font-medium ${statusColor}`}
           >
-            {order.status.toUpperCase()}
+            {order.order_status.toUpperCase()}
           </span>
         </div>
 
@@ -134,9 +140,9 @@ export default function DealerOrderDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {order.items.map(item => (
-                <tr key={item.id} className="border-t">
-                  <td className="p-3">{item.product.name}</td>
+              {order.order_items.map((item, index) => (
+                <tr key={`${item.product_name}-${index}`} className="border-t">
+                  <td className="p-3">{item.product_name}</td>
                   <td className="p-3">
                     ₹{item.price_at_order.toFixed(2)}
                   </td>

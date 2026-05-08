@@ -10,7 +10,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 type CreateCategoryFormInputs = {
-  name: string;
+  main_category: string;
+  sub_category: string;
   category_image?: FileList;
 };
 
@@ -85,7 +86,8 @@ export default function CreateCategoryPage() {
     setSuccess(null);
     try {
       const formData = new FormData();
-      formData.append('name', data.name);
+      formData.append('main_category', data.main_category.trim());
+      formData.append('sub_category', data.sub_category.trim());
 
       const selectedImage = pastedImage || data.category_image?.[0];
       if (selectedImage) {
@@ -123,7 +125,7 @@ export default function CreateCategoryPage() {
           <FiChevronLeft /> Back to Categories
         </Link>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">Create New Category</h1>
-        <p className="text-slate-500 text-sm">Define a new category for your product organization.</p>
+        <p className="text-slate-500 text-sm">Create a main category and sub category mapping.</p>
       </div>
 
       <motion.div 
@@ -135,20 +137,39 @@ export default function CreateCategoryPage() {
           
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">
-              Category Name
+              Main Category
             </label>
             <div className="relative group">
               <FiFolderPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <input
                 type="text"
-                {...register('name', { required: 'Category name is required' })}
-                placeholder="e.g. Winter Collection"
+                {...register('main_category', { required: 'Main category is required' })}
+                placeholder="e.g. ElkoEP"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm"
               />
             </div>
-            {errors.name && (
+            {errors.main_category && (
               <p className="text-[10px] font-bold text-rose-500 ml-1 uppercase tracking-tighter">
-                {errors.name.message}
+                {errors.main_category.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-slate-400 ml-1">
+              Sub Category
+            </label>
+            <div className="relative group">
+              <FiFolderPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+              <input
+                type="text"
+                {...register('sub_category', { required: 'Sub category is required' })}
+                placeholder="e.g. Timers / Relays"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm"
+              />
+            </div>
+            {errors.sub_category && (
+              <p className="text-[10px] font-bold text-rose-500 ml-1 uppercase tracking-tighter">
+                {errors.sub_category.message}
               </p>
             )}
           </div>

@@ -28,7 +28,7 @@ export async function GET() {
 
     const { data: categories, error } = await supabase
       .from("categories")
-      .select("id, name, image_url")
+      .select("id, name, image_url, main_category")
       .is('deleted_at', null)
       .eq("is_active",true)
       .not("id", "in", `(${hiddenIds.join(",")})`);
@@ -38,7 +38,13 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ categories });
+    return NextResponse.json({
+      categories:
+        categories?.map((category) => ({
+          ...category,
+          main_category: category.main_category || category.name,
+        })) || [],
+    });
   } catch (err) {
     console.error("Unexpected error fetching categories:", err);
     return NextResponse.json(
