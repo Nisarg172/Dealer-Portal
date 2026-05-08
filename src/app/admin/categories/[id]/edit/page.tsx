@@ -9,13 +9,14 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 
 type EditCategoryFormInputs = {
-  name: string;
+  sub_category: string;
   category_image?: FileList;
 };
 
 type CategoryData = {
   id: string;
   name: string;
+  main_category: string | null;
   image_url: string | null;
 };
 
@@ -29,6 +30,7 @@ export default function EditCategoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [mainCategoryName, setMainCategoryName] = useState('');
   const [pastedImage, setPastedImage] = useState<File | null>(null);
 
   const categoryImage = watch('category_image');
@@ -86,8 +88,9 @@ export default function EditCategoryPage() {
       try {
         const response = await apiClient.get(`/admin/categories/${id}`);
         const category: CategoryData = response.data.category;
+        setMainCategoryName(category.main_category || category.name);
         reset({
-          name: category.name,
+          sub_category: category.name,
         });
         setImagePreview(category.image_url || null);
       } catch (err: any) {
@@ -106,7 +109,7 @@ export default function EditCategoryPage() {
     setSuccess(null);
     try {
       const formData = new FormData();
-      formData.append('name', data.name);
+      formData.append('sub_category', data.sub_category.trim());
       const selectedImage = pastedImage || data.category_image?.[0];
       if (selectedImage) {
         formData.append('category_image', selectedImage);
@@ -156,22 +159,29 @@ export default function EditCategoryPage() {
         className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
       >
         <form onPaste={handleImagePaste} onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Main Category</p>
+            <p className="mt-1 text-sm font-semibold text-slate-700">{mainCategoryName || '—'}</p>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Rename main category from Categories list page.
+            </p>
+          </div>
           <div className="space-y-2">
             <label className="ml-1 text-xs font-bold uppercase tracking-widest text-slate-400">
-              Category Name
+              Sub Category
             </label>
             <div className="group relative">
               <FiFolder className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
               <input
                 type="text"
-                {...register('name', { required: 'Category name is required' })}
-                placeholder="e.g. Electronics"
+                {...register('sub_category', { required: 'Sub category is required' })}
+                placeholder="e.g. Timers / Relays"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
               />
             </div>
-            {errors.name && (
+            {errors.sub_category && (
               <p className="ml-1 text-[10px] font-bold uppercase text-rose-500">
-                {errors.name.message}
+                {errors.sub_category.message}
               </p>
             )}
           </div>

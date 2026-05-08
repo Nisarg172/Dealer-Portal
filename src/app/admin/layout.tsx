@@ -8,6 +8,7 @@ import {
   FiHome, FiUsers, FiGrid, FiBox, FiPercent, 
   FiEye, FiClipboard, FiLogOut, FiMenu, FiX, FiChevronLeft, FiSearch, FiBell 
 } from 'react-icons/fi';
+import { logout } from '@/lib/auth';
 
 const navItems = [
   { label: 'Dashboard', href: '/admin/dashboard', icon: FiHome },
@@ -44,6 +45,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setShowSearchDropdown(false);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
+  };
+
   return (
     <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
       
@@ -54,7 +60,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         transition={{ type: 'spring', stiffness: 400, damping: 40 }}
         className="hidden lg:flex flex-col bg-slate-900 text-white relative z-50 shadow-2xl overflow-hidden"
       >
-        <SidebarContent isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} pathname={pathname} />
+        <SidebarContent
+          isCollapsed={isCollapsed}
+          setIsCollapsed={setIsCollapsed}
+          pathname={pathname}
+          onLogout={handleLogout}
+        />
       </motion.aside>
 
       {/* Mobile Sidebar */}
@@ -70,7 +81,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
               className="fixed inset-y-0 left-0 w-[280px] bg-slate-900 z-[70] lg:hidden"
             >
-              <SidebarContent isCollapsed={false} pathname={pathname} mobileClose={() => setIsMobileOpen(false)} />
+              <SidebarContent
+                isCollapsed={false}
+                pathname={pathname}
+                mobileClose={() => setIsMobileOpen(false)}
+                onLogout={handleLogout}
+              />
             </motion.aside>
           </>
         )}
@@ -176,7 +192,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 }
 
-function SidebarContent({ isCollapsed, setIsCollapsed, pathname, mobileClose }: any) {
+function SidebarContent({ isCollapsed, setIsCollapsed, pathname, mobileClose, onLogout }: any) {
   return (
     <div className="flex flex-col h-full py-6 overflow-hidden">
       <div className="px-6 h-12 mb-8 flex items-center justify-between">
@@ -214,7 +230,10 @@ function SidebarContent({ isCollapsed, setIsCollapsed, pathname, mobileClose }: 
       </nav>
 
       <div className="px-3 mt-auto pt-4 border-t border-slate-800">
-        <button className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all">
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all"
+        >
           <FiLogOut size={20} className="shrink-0" />
           {!isCollapsed && <span className="text-sm font-bold uppercase tracking-widest">Logout</span>}
         </button>

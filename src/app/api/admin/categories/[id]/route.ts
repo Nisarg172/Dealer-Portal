@@ -44,7 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   try {
     const { data: category, error } = await supabase
       .from('categories')
-      .select('id, name, image_url')
+      .select('id, name, image_url, main_category')
       .eq('id', categoryId)
       .is('deleted_at', null)
       .single();
@@ -54,7 +54,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Category not found or database error.' }, { status: 404 });
     }
 
-    return NextResponse.json({ category });
+    return NextResponse.json({
+      category: {
+        ...category,
+        main_category: category.main_category || category.name,
+      },
+    });
   } catch (err) {
     console.error('Unexpected error fetching category:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -72,25 +77,32 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   try {
     const contentType = req.headers.get('content-type') || '';
-    let name = '';
+    let subCategoryName = '';
+    let mainCategory = '';
     let imageFile: File | null = null;
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
-      name = ((formData.get('name') as string) || '').trim();
+      subCategoryName = (
+        (formData.get('sub_category') as string) ||
+        (formData.get('name') as string) ||
+        ''
+      ).trim();
+      mainCategory = ((formData.get('main_category') as string) || '').trim();
       imageFile = formData.get('category_image') as File | null;
     } else {
       const body = await req.json();
-      name = (body?.name || '').trim();
+      subCategoryName = (body?.sub_category || body?.name || '').trim();
+      mainCategory = (body?.main_category || '').trim();
     }
 
-    if (!name) {
-      return NextResponse.json({ error: 'Category name is required.' }, { status: 400 });
+    if (!subCategoryName) {
+      return NextResponse.json({ error: 'Sub category name is required.' }, { status: 400 });
     }
 
     const { data: existingCategory, error: existingCategoryError } = await supabase
       .from('categories')
-      .select('image_url')
+      .select('name, main_category, image_url')
       .eq('id', categoryId)
       .is('deleted_at', null)
       .single();
@@ -98,6 +110,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (existingCategoryError || !existingCategory) {
       return NextResponse.json({ error: 'Category not found or database error.' }, { status: 404 });
     }
+    const normalizedMainCategory =
+      mainCategory ||
+      existingCategory.main_category ||
+      existingCategory.name ||
+      subCategoryName;
 
     let image_url = existingCategory.image_url;
 
@@ -135,7 +152,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const { data: updatedCategory, error } = await supabase
       .from('categories')
       .update({
-        name,
+        name: subCategoryName,
+        main_category: normalizedMainCategory,
         image_url,
         updated_at: new Date().toISOString(),
       })
@@ -148,7 +166,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: error?.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, category: updatedCategory }, { status: 200 });
+    return NextResponse.json(
+      {
+        success: true,
+        category: {
+          ...updatedCategory,
+          main_category: updatedCategory.main_category || updatedCategory.name,
+        },
+      },
+      { status: 200 }
+    );
   } catch (err) {
     console.error('Unexpected error updating category:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
