@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import apiClient from '@/lib/axios';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiLoader } from 'react-icons/fi';
@@ -15,8 +15,6 @@ type LoginFormInputs = {
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isSessionExpiredRedirect = searchParams.get('sessionExpired') === '1';
   const {
     register,
     handleSubmit,
@@ -29,8 +27,10 @@ export default function LoginPage() {
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
 
   useEffect(() => {
-    setShowSessionExpiredModal(isSessionExpiredRedirect);
-  }, [isSessionExpiredRedirect]);
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    setShowSessionExpiredModal(params.get('sessionExpired') === '1');
+  }, []);
 
   const onSubmit = async (data: LoginFormInputs) => {
     setLoading(true);
