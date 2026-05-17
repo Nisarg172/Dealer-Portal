@@ -231,7 +231,7 @@ export default function DealerProductDetailPage() {
               </h1>
 
               <p className="mt-4 text-base leading-relaxed text-slate-600">
-                {product.description || "High-quality product crafted for reliable daily usage."}
+                {product.description}
               </p>
 
               {/* Price */}
