@@ -14,6 +14,9 @@ import {
   FiX,
   FiUser
 } from 'react-icons/fi';
+import { logout } from '@/lib/auth';
+import { getSessionExpiry } from '@/lib/session';
+import SessionExpiredModal from '@/components/common/SessionExpiredModal';
 
 const navItems = [
   { label: 'Dashboard', href: '/dealer/dashboard', icon: FiGrid },
@@ -27,6 +30,8 @@ export default function DealerLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isSessionExpiredModalOpen, setIsSessionExpiredModalOpen] = useState(false);
+  const [isSessionExpiryLogoutLoading, setIsSessionExpiryLogoutLoading] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -37,8 +42,32 @@ export default function DealerLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
+  useEffect(() => {
+    const expiresAt = getSessionExpiry();
+    if (!expiresAt) return;
 
-  const handleLogout = () => {
+    const remainingMs = expiresAt - Date.now();
+    if (remainingMs <= 0) {
+      setIsSessionExpiredModalOpen(true);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsSessionExpiredModalOpen(true);
+    }, remainingMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
+  };
+
+  const handleSessionExpiryLogout = async () => {
+    if (isSessionExpiryLogoutLoading) return;
+    setIsSessionExpiryLogoutLoading(true);
+    await logout();
     router.push('/login');
   };
 
@@ -170,6 +199,11 @@ export default function DealerLayout({ children }: { children: React.ReactNode }
           </motion.div>
         </div>
       </main>
+      <SessionExpiredModal
+        isOpen={isSessionExpiredModalOpen}
+        onConfirm={handleSessionExpiryLogout}
+        isSubmitting={isSessionExpiryLogoutLoading}
+      />
     </div>
   );
 }

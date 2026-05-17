@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { jwtVerify } from 'jose';
+import { jwtVerify, errors as joseErrors } from 'jose';
 
 interface JwtPayload {
   id: string;
@@ -8,6 +8,14 @@ interface JwtPayload {
 }
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
+const getLoginRedirect = (req: NextRequest, sessionExpired = false) => {
+  const loginUrl = new URL('/login', req.url);
+  if (sessionExpired) {
+    loginUrl.searchParams.set('sessionExpired', '1');
+  }
+  return NextResponse.redirect(loginUrl);
+};
 
 export async function middleware(req: NextRequest) {
 
@@ -35,8 +43,7 @@ export async function middleware(req: NextRequest) {
 
   if (!token || !JWT_SECRET) {
     // Redirect to login or return unauthorized error
-    const loginUrl = new URL('/login', req.url);
-    return NextResponse.redirect(loginUrl);
+    return getLoginRedirect(req);
     // return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
@@ -59,9 +66,11 @@ export async function middleware(req: NextRequest) {
     // Proceed to the next handler
     return NextResponse.next();
   } catch (error) {
+    if (error instanceof joseErrors.JWTExpired) {
+      return getLoginRedirect(req, true);
+    }
     console.error('JWT verification failed:', error);
-    const loginUrl = new URL('/login', req.url);
-    return NextResponse.redirect(loginUrl);
+    return getLoginRedirect(req);
     // return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 }

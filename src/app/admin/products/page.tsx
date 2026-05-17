@@ -56,12 +56,31 @@ export default function AdminProductsPage() {
     return res.data; // { data, meta }
   };
 
-  const fetchCatagorys = async () => {
-    const res = await apiClient.get('/admin/categories');
-    setCategories(res.data.data.map((cat: { id: string; name: string })=>({label:cat.name, value:cat.id})));
+  const fetchCategories = async () => {
+    const pageSize = 100;
+    let page = 1;
+    let totalPages = 1;
+    const allCategories: { id: string; name: string }[] = [];
 
-      
-  }
+    do {
+      const res = await apiClient.get('/admin/categories', {
+        params: {
+          page,
+          limit: pageSize,
+          sortBy: 'name',
+          sortOrder: 'asc',
+        },
+      });
+
+      allCategories.push(...(res.data.data || []));
+      totalPages = Number(res.data.meta?.totalPages || 1);
+      page += 1;
+    } while (page <= totalPages);
+
+    setCategories(
+      allCategories.map((cat) => ({ label: cat.name, value: cat.id }))
+    );
+  };
 
   const handleBulkFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0] ?? null;
@@ -120,7 +139,7 @@ export default function AdminProductsPage() {
   };
 
   useEffect(() => {
-    fetchCatagorys();
+    fetchCategories();
   }, []);
 
   return (
