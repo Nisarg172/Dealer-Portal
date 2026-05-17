@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
 import { supabase } from '@/lib/supabase';
 import { randomUUID } from 'crypto';
 
@@ -18,6 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         base_price,
         purchase_price,
         description,
+        long_description,
         image_urls,
         datasheet_url,
         product_url,
@@ -56,6 +55,11 @@ export async function PUT(
   const base_price = Number(formData.get('base_price'));
   const purchase_price = Number(formData.get('purchase_price'));
   const description = formData.get('description') as string;
+  const longDescriptionInput = formData.get('long_description');
+  const long_description =
+    typeof longDescriptionInput === 'string' && longDescriptionInput.trim()
+      ? longDescriptionInput
+      : null;
   const status = formData.get('status') as string;
   const datasheet_url = formData.get('datasheet_url') as string | null;
   const product_url = formData.get('product_url') as string | null;
@@ -129,6 +133,7 @@ export async function PUT(
         base_price,
         purchase_price,
         description,
+        long_description,
         datasheet_url,
         product_url,
         image_urls,

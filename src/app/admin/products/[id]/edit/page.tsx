@@ -2,7 +2,7 @@
 
 import { ClipboardEvent, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import apiClient from '@/lib/axios';
 import { 
   FiChevronLeft, FiBox, FiTag, FiDollarSign, 
@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import TinyMceEditor from '@/components/common/TinyMceEditor';
 
 type EditProductFormInputs = {
   name: string;
@@ -18,6 +19,7 @@ type EditProductFormInputs = {
   base_price: number;
   purchase_price: number;
   description: string;
+  long_description?: string;
   status: 'active' | 'inactive';
   product_image?: FileList;
   datasheet_url?: string;
@@ -31,6 +33,7 @@ type ProductData = {
   base_price: number;
   purchase_price: number;
   description: string;
+  long_description?: string | null;
   is_active: boolean;
   datasheet_url?: string;
   product_url?: string;
@@ -48,10 +51,10 @@ export default function EditProductPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     watch,
-    formState: { errors },
   } = useForm<EditProductFormInputs>();
 
   const [loading, setLoading] = useState(true);
@@ -60,6 +63,30 @@ export default function EditProductPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   const [pastedImage, setPastedImage] = useState<File | null>(null);
+
+  const fetchAllCategories = async (): Promise<Category[]> => {
+    const pageSize = 100;
+    let page = 1;
+    let totalPages = 1;
+    const allCategories: Category[] = [];
+
+    do {
+      const res = await apiClient.get('/admin/categories', {
+        params: {
+          page,
+          limit: pageSize,
+          sortBy: 'name',
+          sortOrder: 'asc',
+        },
+      });
+
+      allCategories.push(...(res.data.data || []));
+      totalPages = Number(res.data.meta?.totalPages || 1);
+      page += 1;
+    } while (page <= totalPages);
+
+    return allCategories;
+  };
 
   // Watch for image changes for preview
   const product_image = watch('product_image');
@@ -114,12 +141,12 @@ export default function EditProductPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [catRes, productRes] = await Promise.all([
-          apiClient.get('/admin/categories'),
+        const [allCategories, productRes] = await Promise.all([
+          fetchAllCategories(),
           apiClient.get(`/admin/products/${id}`),
         ]);
 
-        setCategories(catRes.data.data);
+        setCategories(allCategories);
         const product: ProductData = productRes.data.product;
 
         reset({
@@ -128,6 +155,7 @@ export default function EditProductPage() {
           base_price: product.base_price,
           purchase_price: product.purchase_price,
           description: product.description,
+          long_description: product.long_description || '',
           status: product.is_active ? 'active' : 'inactive',
           datasheet_url: product.datasheet_url || '',
           product_url: product.product_url || '',
@@ -154,6 +182,7 @@ export default function EditProductPage() {
       formData.append('base_price', data.base_price.toString());
       formData.append('purchase_price', data.purchase_price.toString());
       formData.append('description', data.description);
+      formData.append('long_description', data.long_description || '');
       formData.append('status', data.status);
       if (data.datasheet_url) formData.append('datasheet_url', data.datasheet_url);
       if (data.product_url) formData.append('product_url', data.product_url);
@@ -226,6 +255,21 @@ export default function EditProductPage() {
                 />
               </div>
             </div>
+
+            <Controller
+              control={control}
+              name="long_description"
+              defaultValue=""
+              render={({ field }) => (
+                <TinyMceEditor
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  label="Long Description (Optional)"
+                  helperText="Optional rich text content for detailed product information."
+                  disabled={submitting}
+                />
+              )}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Category */}

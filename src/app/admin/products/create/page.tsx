@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import apiClient from '@/lib/axios';
 import { ClipboardEvent, useState, useEffect } from 'react';
 import { 
@@ -12,6 +12,7 @@ import {
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
+import TinyMceEditor from '@/components/common/TinyMceEditor';
 
 type CreateProductFormInputs = {
   name: string;
@@ -19,6 +20,7 @@ type CreateProductFormInputs = {
   base_price: number;
   purchase_price: number;
   description: string;
+  long_description?: string;
   status: 'active' | 'inactive';
   product_image: FileList;
   datasheet_url: string;
@@ -32,7 +34,7 @@ type Category = {
 
 export default function CreateProductPage() {
   const router = useRouter();
-  const { register, handleSubmit, formState: { errors }, reset, watch, clearErrors } = useForm<CreateProductFormInputs>();
+  const { register, control, handleSubmit, formState: { errors }, reset, watch, clearErrors } = useForm<CreateProductFormInputs>();
 
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -114,6 +116,7 @@ export default function CreateProductPage() {
       formData.append('base_price', data.base_price.toString());
       formData.append('purchase_price', data.purchase_price.toString());
       formData.append('description', data.description);
+      formData.append('long_description', data.long_description || '');
       formData.append('status', data.status);
       formData.append('datasheet_url', data.datasheet_url);
       formData.append('product_url', data.product_url);
@@ -195,6 +198,21 @@ export default function CreateProductPage() {
                 />
               </div>
             </div>
+
+            <Controller
+              control={control}
+              name="long_description"
+              defaultValue=""
+              render={({ field }) => (
+                <TinyMceEditor
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  label="Long Description (Optional)"
+                  helperText="Optional rich text content for detailed product information."
+                  disabled={loading}
+                />
+              )}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Category Selection */}

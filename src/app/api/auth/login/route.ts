@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
-import { cookies } from 'next/headers';
 import { supabase } from '@/lib/supabase';
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const TOKEN_EXPIRY_SECONDS = 60 * 60;
 
 export async function POST(req: NextRequest) {
   if (!JWT_SECRET) {
@@ -50,16 +50,20 @@ export async function POST(req: NextRequest) {
     const token = await new SignJWT({ id: userProfile.id, role: userProfile.role,dealers: userProfile.dealers })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
-      .setExpirationTime('1h') // Token expires in 1 hour
+      .setExpirationTime(`${TOKEN_EXPIRY_SECONDS}s`)
       .sign(new TextEncoder().encode(JWT_SECRET));
 
 
     // Set the token as an HTTP-only cookie
-    const response = NextResponse.json({ success: true, user: { id: userProfile.id, role: userProfile.role, dealers: userProfile.dealers } });
+    const response = NextResponse.json({
+      success: true,
+      user: { id: userProfile.id, role: userProfile.role, dealers: userProfile.dealers },
+      sessionExpiresIn: TOKEN_EXPIRY_SECONDS
+    });
     response.cookies.set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60, // 1 hour
+      maxAge: TOKEN_EXPIRY_SECONDS,
       path: '/',
       sameSite: 'lax',
     });

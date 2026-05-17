@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import apiClient from '@/lib/axios';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiLoader } from 'react-icons/fi';
+import { setSessionExpiry } from '@/lib/session';
+import SessionExpiredModal from '@/components/common/SessionExpiredModal';
 
 type LoginFormInputs = {
   identifier: string;
@@ -13,6 +15,8 @@ type LoginFormInputs = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isSessionExpiredRedirect = searchParams.get('sessionExpired') === '1';
   const {
     register,
     handleSubmit,
@@ -22,6 +26,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
+
+  useEffect(() => {
+    setShowSessionExpiredModal(isSessionExpiredRedirect);
+  }, [isSessionExpiredRedirect]);
 
   const onSubmit = async (data: LoginFormInputs) => {
     setLoading(true);
@@ -31,6 +40,10 @@ export default function LoginPage() {
       const response = await apiClient.post('/auth/login', data);
 
       if (response.data.success) {
+        const sessionExpiresIn = Number(response.data.sessionExpiresIn);
+        if (!Number.isNaN(sessionExpiresIn) && sessionExpiresIn > 0) {
+          setSessionExpiry(sessionExpiresIn);
+        }
         const role = response.data.user.role;
 
         if (role === 'admin') router.push('/admin/dashboard');
@@ -46,8 +59,17 @@ export default function LoginPage() {
     }
   };
 
+  const handleSessionExpiredConfirm = () => {
+    setShowSessionExpiredModal(false);
+    router.replace('/login');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <SessionExpiredModal
+        isOpen={showSessionExpiredModal}
+        onConfirm={handleSessionExpiredConfirm}
+      />
       <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-8">
         {/* Header */}
         <div className="text-center mb-6">

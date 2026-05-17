@@ -240,6 +240,13 @@ function DealerProductListingContent() {
           <motion.div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {products.map((product) => {
               const hasDiscount = product.discounted_price < product.base_price;
+              const discountPercentage = hasDiscount
+                ? Math.round(
+                    ((product.base_price - product.discounted_price) /
+                      product.base_price) *
+                      100
+                  )
+                : 0;
               const cartQuantity = cartQuantities[product.id] || 0;
               const isCartUpdating = updatingCartIds.includes(product.id);
               return (
@@ -263,13 +270,26 @@ function DealerProductListingContent() {
                     <h3 className="text-xs font-bold text-slate-800 line-clamp-1 mb-3">
                       {product.name}
                     </h3>
-                    <div className="flex items-center justify-between">
-                      <span className="text-md font-black">
-                        ₹
-                        {hasDiscount
-                          ? product.discounted_price.toLocaleString()
-                          : product.base_price.toLocaleString()}
-                      </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-md font-black text-slate-900">
+                          ₹
+                          {(hasDiscount
+                            ? product.discounted_price
+                            : product.base_price
+                          ).toLocaleString()}
+                        </p>
+                        {hasDiscount && (
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="text-[11px] text-slate-400 line-through">
+                              ₹{product.base_price.toLocaleString()}
+                            </span>
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+                              {discountPercentage}% OFF
+                            </span>
+                          </div>
+                        )}
+                      </div>
                       <button
                         className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center border border-transparent group-hover:border-slate-100 cursor-pointer transition-all"
                         onClick={() => {

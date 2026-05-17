@@ -114,6 +114,11 @@ export async function POST(req: NextRequest) {
     const base_price = Number(formData.get('base_price'));
     const purchase_price = Number(formData.get('purchase_price'));
     const description = formData.get('description') as string;
+    const longDescriptionInput = formData.get('long_description');
+    const long_description =
+      typeof longDescriptionInput === 'string' && longDescriptionInput.trim()
+        ? longDescriptionInput
+        : null;
     const status = formData.get('status') as string;
 
     const datasheet_url = formData.get('datasheet_url') as string | null;
@@ -180,6 +185,7 @@ export async function POST(req: NextRequest) {
         base_price,
         purchase_price,
         description,
+        long_description,
         image_urls: imageUrls,
         datasheet_url,
         product_url,
@@ -195,6 +201,7 @@ export async function POST(req: NextRequest) {
         image_urls,
         datasheet_url,
         product_url,
+        long_description,
         categories ( id, name )
         `
       )

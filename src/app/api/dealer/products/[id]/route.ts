@@ -54,6 +54,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         id,
         name,
         description,
+        long_description,
         base_price,
         image_urls,
         is_active,
@@ -134,9 +135,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     
     // Assuming calculateDiscountedPrice utility handles applying the percentage
   
-    discountedPrice = await calculateDealerPrice({ id: productData.id,
-  base_price: productData.base_price,
-  category_id: productData.category.id || ''}, {dealerId: dealerData.id});
+    discountedPrice = await calculateDealerPrice(
+      {
+        id: productData.id,
+        base_price: productData.base_price,
+        category_id: productData.category?.id || '',
+      },
+      { dealerId: dealerData.id }
+    );
 
   console.log("Final discounted price:", discountedPrice);
     return NextResponse.json({
@@ -144,6 +150,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         id: productData.id,
         name: productData.name,
         description: productData.description,
+        long_description: productData.long_description || null,
         base_price: productData.base_price,
         discounted_price: discountedPrice,
         category_name: productData.category?.name,
