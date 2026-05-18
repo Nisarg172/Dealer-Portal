@@ -371,7 +371,7 @@ export default function DealerProductDetailPage() {
       </div>
 
       {/* Description / Documents Tabs */}
-      {/* <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 bg-slate-50 px-4 pt-2">
           <button
             type="button"
@@ -403,7 +403,7 @@ export default function DealerProductDetailPage() {
               <p className="text-lg text-gray-900">
                 <span className="font-semibold">{product.name}</span>
                 <span className="mx-2 text-gray-400">|</span>
-                <span>{product.description || "No description available."}</span>
+                <span>{product.description}</span>
               </p>
 
               {product.long_description ? (
@@ -414,8 +414,7 @@ export default function DealerProductDetailPage() {
                   {parse(product.long_description)}
                 </div>
               ) : (
-                <p className="text-gray-500">No long description available.</p>
-              )}
+<></>              )}
             </div>
           ) : (
             <div>
@@ -431,7 +430,7 @@ export default function DealerProductDetailPage() {
                       rel="noopener noreferrer"
                       className="text-blue-600 underline"
                     >
-                      Datasheet Link
+                      Datasheet
                     </a>
                   ) : (
                     <span className="text-gray-500">
@@ -447,7 +446,7 @@ export default function DealerProductDetailPage() {
                       rel="noopener noreferrer"
                       className="text-blue-600 underline"
                     >
-                      Product Web URL
+                      Product Documentation
                     </a>
                   ) : (
                     <span className="text-gray-500">
@@ -459,7 +458,7 @@ export default function DealerProductDetailPage() {
             </div>
           )}
         </div>
-      </div> */}
+      </div>
 
 
     </div>
